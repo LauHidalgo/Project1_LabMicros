@@ -20,6 +20,11 @@ section .data
 
 
 	nameUser: db'' ;Almacena nombre del usuario
+	;mov rax,0							;rax = "sys_read"
+	;mov rdi,0							;rdi = 0 (standard input = teclado)
+	;mov rsi,nameUser 					;rsi = direccion de memoria donde se almacena la tecla capturada
+	;mov rdx,50							;rdx=1 (cuantos eventos o teclazos capturar)
+	;syscall	
 	;nameUser_length: dd 5 ;máximo largo del nombre de usuario (dd 50)
 
 	termios: times 36 db 0 ;Estructura 36 bytes, contiene modo de operación de la consola
@@ -163,7 +168,7 @@ _primero:
 	mov rax,0          ;rax = sys_read
 	mov rdi,0          ;rdi = teclado (standar input)
 	mov rsi,nameUser   ;direccion de memoria donde se almacena nombre del usuario
-	mov rdx,50
+	mov rdx,10
 	syscall
 
 _segundo:
@@ -179,7 +184,7 @@ _tercero:
 	mov rax,1
 	mov rdi,1
 	mov rsi,nameUser
-	mov rdx,20
+	mov rdx,10
 	syscall
 	
 	;Limpieza de pantalla
