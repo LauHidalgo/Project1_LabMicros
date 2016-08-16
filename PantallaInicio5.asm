@@ -184,7 +184,7 @@ _tercero:
 	mov rax,1
 	mov rdi,1
 	mov rsi,nameUser
-	mov rdx,50
+	mov rdx,20
 	syscall
 	
 	;Limpieza de pantalla
