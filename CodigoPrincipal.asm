@@ -29,8 +29,19 @@ section .data
 	msjUser: db 0xa, 'Ingrese el nombre del jugador y luego presione Enter: ' 		;Banner para ingreso de nombre de usuario.
 	msjUser_length: equ $-msjUser 										;Longitud de msj de nombre del usuario
 
-
 	nameUser: db'' 													;Almacena nombre del usuario
+	
+	msjintentos: db 0xa,'Intentos Restantes -----> ',0xa 	 								;Encabezado de mensaje de intentos restantes
+	msjintentos_tamano: equ $-msjintentos
+	
+	encabezadoNombre: db 'Nombre ----> ' ,0xa	 								;Encabezado de mensaje de intentos restantes
+	encabezadoNombre_tamano: equ $-encabezadoNombre
+	
+	numero1:	db '1'													;Variables char que sirven para escribir los numeros 1 al 3
+	numero2: db '2'
+	numero3: db '3'
+	
+	
 	
 	termios: times 36 db 0 												;Estructura de 36 bytes, contiene modo de operacion de la consola
 	stdin: equ 0 														;Standard Input
@@ -56,11 +67,14 @@ section .data
 	parte4: db '|                                                 |',0xa				;Parte 4 para el area de juego
 	parte4_tamano: equ $-parte4								;Tamaño de la variable 
 	
-	parte5: db '+________________________|________________________+'	;Parte 5 para el area de juego
+	parte5: db '+________________________|________________________+',0xa	;Parte 5 para el area de juego
 	parte5_tamano: equ $-parte5								;Tamaño de la variable 
 	
+	cambiodelinea: db ' ',0xa										;linea vacia para el area de juego
+	cambiodelinea_tamano: equ $-cambiodelinea							;Tamaño de la variable 
+	
 	lineavacia: db '#',0xa										;linea vacia para el area de juego
-	lineavacia_tamano: equ $-lineavacia							;Tamaño de la variable 
+	lineavacia_tamano: equ $-lineavacia			
 	
 	
 	
@@ -95,6 +109,16 @@ section .data
 	dir_mov_X: db '+'		;Por cuestion de control, se tienen las variables de en que direccion de movimiento se encuentra la pelota
 	dir_mov_Y: db '+'
 	
+	arriba db 0x1b, "[1A" 			;Codigo ANSI para mover el cursor 1 posicion hacia arriba
+	arriba_tamano: equ $-arriba	
+	abajo db 0x1b, "[1B" 			;Codigo ANSI para mover el cursor 1 posicion hacia abajo
+	abajo_tamano: equ $-abajo		
+	derecha db 0x1b, "[1C" 			;Codigo ANSI para mover el cursor 1 posicion hacia la derecha
+	derecha_tamano: equ $-derecha	
+	izquierda db 0x1b, "[1D" 			;Codigo ANSI para mover el cursor 1 posicion hacia la izquierda
+	izquierda_tamano: equ $-izquierda
+	
+	
 	
 
 
@@ -116,6 +140,14 @@ section .text
 	global _imprimir_parte4
 	global _imprimir_parte5
 	global _loop1
+	global _intentos1
+	global _intentos2
+	global _intentos3
+	global _terminar
+	
+	;globales para la funcion "cursor_origen"
+	global _loop2
+	global _nombreyvidas
 
 
 
@@ -178,7 +210,10 @@ _start:
 	;Imprimir el area de juego
 	call imprimir_area_juego
 	
-
+	;Colocar el cursor en la posicion de origen para iniciar el juego
+	;call cursor_origen
+	
+	
 
 
 
@@ -388,8 +423,94 @@ _imprimir_parte5:
 	mov rsi, parte5			
 	mov rdx, parte5_tamano	
 	syscall
+	
+	;--------------------------
+	mov rax, 1					;Una vez impresas las partes del area de juego, se procede a imprimir
+	mov rdi, 1					;el nombre de usuario en la parte inferior, iniciando por el encabezado.
+	mov rsi, encabezadoNombre			
+	mov rdx, encabezadoNombre_tamano 	
+	syscall
+	
+	
+	mov rax, 1					;Ademas del nombre, se imprime tambien la cantidad de intentos
+	mov rdi, 1	
+	mov rsi, msjintentos			;El primer mensaje a imprimir en intentos es el encabezado.
+	mov rdx, msjintentos_tamano	
+	syscall
+	
+	;mov r9, [intentos]				;Se carga el registro r9 con el valor de intentos	para comparar y asi establecer lque numero imprimir
+	;cmp r9, 1
+	;je _intentos1
+	;cmp r9, 2
+	;je _intentos2
+	;cmp r9, 3
+	;je _intentos3
+	
+;_intentos1:
+;	mov rax, 1					
+;	mov rdi, 1	
+;	mov rsi, numero1			;Se imprime el numero 1
+;	mov rdx, 1
+;	syscall
+;	jmp _terminar
+;
+;_intentos2:
+;	mov rax, 1					
+;	mov rdi, 1	
+;	mov rsi, numero2			;Se imprime el numero 2
+;	mov rdx, 1
+;	syscall
+;	jmp _terminar
+
+;_intentos3:
+;	mov rax, 1					
+;	mov rdi, 1	
+;	mov rsi, numero3			;Se imprime el numero 3
+;	mov rdx, 1
+;	syscall
+;	jmp _terminar	
+;	
+;_terminar
 	ret			; Se retorna al ciclo normal del programa principal
 ;fin de la funcion
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion encargada de colocar el cursor en el origen de coordenadas cuando se imprime el area de juego.
+;Lo realiza mediante el movimiento con codigos de escape ANSI 50 veces hacia la izquierda (50 es el ancho
+;total del area de juego.
+cursor_origen:
+	
+	mov r9,0				;Se inicializa el registro contador r9 con un valor entero de 0
+
+_loop2:
+	
+	cmp r9, 50			;Se compara con el valor total de columnas
+	je _nombreyvidas		;Si es igual, se envia a la etiqueta de finalizacion de funcion
+	
+	mov rax, 1			;Se cargan los registros con los valores correspondientes y variables ANSI
+	mov rdi, 1	
+	mov rsi, izquierda			
+	mov rdx, izquierda_tamano	
+	syscall				;Se llama al sistema
+	inc r9				;Se incrementa en una unidad el registro contador r9
+	jmp _loop2			;Se salta incondicionalmente a loop2 para proceder a una nueva iteracion
+	
+	
+_nombreyvidas:
+	
+	mov rax,1
+	mov rdi,1
+	mov rsi,nameUser
+	mov rdx,20
+	syscall
+	
+	
+	
+	
+	
+	ret		
+;Fin de la funcion
 
 	
 ;-------------------------------------------------------------------------------------------------------------------------------------
