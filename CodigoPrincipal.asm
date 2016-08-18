@@ -28,13 +28,12 @@ section .data
 
 	msjUser: db 0xa, 'Ingrese el nombre del jugador y luego presione Enter: ' 		;Banner para ingreso de nombre de usuario.
 	msjUser_length: equ $-msjUser 										;Longitud de msj de nombre del usuario
-
-	nameUser: db'' 													;Almacena nombre del usuario
 	
-	msjintentos: db 0xa,'Intentos Restantes -----> ',0xa 	 								;Encabezado de mensaje de intentos restantes
+	
+	msjintentos: db 0xa,'Intentos Restantes: *'							;Encabezado de mensaje de intentos restantes
 	msjintentos_tamano: equ $-msjintentos
 	
-	encabezadoNombre: db 'Nombre ----> ' ,0xa	 								;Encabezado de mensaje de intentos restantes
+	encabezadoNombre: db 'Nombre: *'	 								;Encabezado de mensaje de intentos restantes
 	encabezadoNombre_tamano: equ $-encabezadoNombre
 	
 	numero1:	db '1'													;Variables char que sirven para escribir los numeros 1 al 3
@@ -70,7 +69,7 @@ section .data
 	parte5: db '+________________________|________________________+',0xa	;Parte 5 para el area de juego
 	parte5_tamano: equ $-parte5								;Tamaño de la variable 
 	
-	cambiodelinea: db ' ',0xa										;linea vacia para el area de juego
+	cambiodelinea: db '*',0xa										;linea vacia para el area de juego
 	cambiodelinea_tamano: equ $-cambiodelinea							;Tamaño de la variable 
 	
 	lineavacia: db '#',0xa										;linea vacia para el area de juego
@@ -78,7 +77,7 @@ section .data
 	
 	
 	
-	intentos: db 3			;Variable que indica el numero de intentos que el usuario tiene en el juego
+	;intentos: db 3			;Variable que indica el numero de intentos que el usuario tiene en el juego
 	
 	bloquesY: db 0			;Para uso de la funcion BorraBloque, los indices de los bloques al chocar estan 
 	bloquesX: db 0			;regidos por estas dos variables
@@ -117,6 +116,9 @@ section .data
 	derecha_tamano: equ $-derecha	
 	izquierda db 0x1b, "[1D" 			;Codigo ANSI para mover el cursor 1 posicion hacia la izquierda
 	izquierda_tamano: equ $-izquierda
+	
+	
+	nameUser: db'' 													;Almacena nombre del usuario
 	
 	
 	
@@ -194,7 +196,7 @@ _start:
 	mov rax,0          			;rax = sys_read
 	mov rdi,0          			;rdi = teclado (standar input)
 	mov rsi,nameUser   		;direccion de memoria donde se almacena nombre del usuario
-	mov rdx,20				;numero de bytes (teclas presionadas antes de enter) a almacenar 
+	mov rdx,7				;numero de bytes (teclas presionadas antes de enter) a almacenar 
 	syscall
 	
 	;Apagar modo canonico y el modo echo
@@ -203,6 +205,8 @@ _start:
 	
 	;Inicializar las variables del juego
 	;call inicializar
+		;Inicializando el registro de intentos (r15)
+		mov r15, 3				;El usuario tiene 3 intentos inicialmente
 
 	;Limpieza de pantalla
 	call limpiar_pantalla
@@ -212,6 +216,8 @@ _start:
 	
 	;Colocar el cursor en la posicion de origen para iniciar el juego
 	;call cursor_origen
+	
+	
 	
 	
 
@@ -431,6 +437,17 @@ _imprimir_parte5:
 	mov rdx, encabezadoNombre_tamano 	
 	syscall
 	
+	mov rax, 1					;Una vez impresas las partes del area de juego, se procede a imprimir
+	mov rdi, 1					;el nombre de usuario en la parte inferior, iniciando por el encabezado.
+	mov rsi, nameUser			
+	mov rdx, 20	
+	syscall
+	
+	mov rax, 1					;Cambio de linea
+	mov rdi, 1					
+	mov rsi, cambiodelinea			
+	mov rdx, cambiodelinea_tamano 	
+	syscall
 	
 	mov rax, 1					;Ademas del nombre, se imprime tambien la cantidad de intentos
 	mov rdi, 1	
@@ -438,39 +455,47 @@ _imprimir_parte5:
 	mov rdx, msjintentos_tamano	
 	syscall
 	
-	;mov r9, [intentos]				;Se carga el registro r9 con el valor de intentos	para comparar y asi establecer lque numero imprimir
-	;cmp r9, 1
-	;je _intentos1
-	;cmp r9, 2
-	;je _intentos2
-	;cmp r9, 3
-	;je _intentos3
 	
-;_intentos1:
-;	mov rax, 1					
-;	mov rdi, 1	
-;	mov rsi, numero1			;Se imprime el numero 1
-;	mov rdx, 1
-;	syscall
-;	jmp _terminar
-;
-;_intentos2:
-;	mov rax, 1					
-;	mov rdi, 1	
-;	mov rsi, numero2			;Se imprime el numero 2
-;	mov rdx, 1
-;	syscall
-;	jmp _terminar
+	cmp r15, 1					;Se compara el registro r15 (el valor de intentos)	para establecer lque numero imprimir
+	je _intentos1
+	cmp r15, 2
+	je _intentos2
+	cmp r15, 3
+	je _intentos3
+	
+_intentos1:
+	mov rax, 1					
+	mov rdi, 1	
+	mov rsi, numero1			;Se imprime el numero 1
+	mov rdx, 1
+	syscall
+	jmp _terminar
 
-;_intentos3:
-;	mov rax, 1					
-;	mov rdi, 1	
-;	mov rsi, numero3			;Se imprime el numero 3
-;	mov rdx, 1
-;	syscall
-;	jmp _terminar	
-;	
-;_terminar
+_intentos2:
+	mov rax, 1					
+	mov rdi, 1	
+	mov rsi, numero2			;Se imprime el numero 2
+	mov rdx, 1
+	syscall
+	jmp _terminar
+
+_intentos3:
+	mov rax, 1					
+	mov rdi, 1	
+	mov rsi, numero3			;Se imprime el numero 3
+	mov rdx, 1
+	syscall
+	jmp _terminar	
+	
+
+_terminar:
+
+	mov rax, 1					;Cambio de linea
+	mov rdi, 1					
+	mov rsi, cambiodelinea			
+	mov rdx, cambiodelinea_tamano 	
+	syscall
+	
 	ret			; Se retorna al ciclo normal del programa principal
 ;fin de la funcion
 
@@ -479,37 +504,25 @@ _imprimir_parte5:
 ;Funcion encargada de colocar el cursor en el origen de coordenadas cuando se imprime el area de juego.
 ;Lo realiza mediante el movimiento con codigos de escape ANSI 50 veces hacia la izquierda (50 es el ancho
 ;total del area de juego.
-cursor_origen:
+;cursor_origen:
 	
-	mov r9,0				;Se inicializa el registro contador r9 con un valor entero de 0
+;	mov r9,0				;Se inicializa el registro contador r9 con un valor entero de 0
 
-_loop2:
+;_loop2:
 	
-	cmp r9, 50			;Se compara con el valor total de columnas
-	je _nombreyvidas		;Si es igual, se envia a la etiqueta de finalizacion de funcion
+;	cmp r9, 50			;Se compara con el valor total de columnas
+;	je _nombreyvidas		;Si es igual, se envia a la etiqueta de finalizacion de funcion
 	
-	mov rax, 1			;Se cargan los registros con los valores correspondientes y variables ANSI
-	mov rdi, 1	
-	mov rsi, izquierda			
-	mov rdx, izquierda_tamano	
-	syscall				;Se llama al sistema
-	inc r9				;Se incrementa en una unidad el registro contador r9
-	jmp _loop2			;Se salta incondicionalmente a loop2 para proceder a una nueva iteracion
-	
-	
-_nombreyvidas:
-	
-	mov rax,1
-	mov rdi,1
-	mov rsi,nameUser
-	mov rdx,20
-	syscall
+;	mov rax, 1			;Se cargan los registros con los valores correspondientes y variables ANSI
+;	mov rdi, 1	
+;	mov rsi, izquierda			
+;	mov rdx, izquierda_tamano	
+;	syscall				;Se llama al sistema
+;	inc r9				;Se incrementa en una unidad el registro contador r9
+;	jmp _loop2			;Se salta incondicionalmente a loop2 para proceder a una nueva iteracion
 	
 	
-	
-	
-	
-	ret		
+;	ret		
 ;Fin de la funcion
 
 	
