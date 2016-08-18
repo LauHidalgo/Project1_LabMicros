@@ -5,7 +5,7 @@
 ;
 ;	Proyecto #1: Juego estilo Arkanoid (Micronoid)
 ;
-;	Codigo desarrollado por:
+;	Codigo desarrollado por el grupo 3:
 ;		- Anthony Chaves Vasquez
 ;		- Laura Hidalgo Soto
 ;		- Carlos Murillo Soto
@@ -16,6 +16,35 @@
 
 ;////////////////////////////////////////////////////////////////////	Definicion de variables	////////////////////////////////////////////////////////////////////
 section .data
+	
+	intentos: dq 3			;Variable que indica el numero de intentos que el usuario tiene en el juego
+	
+	bloquesY: db 0			;Para uso de la funcion BorraBloque, los indices de los bloques al chocar estan 
+	bloquesX: db 0			;regidos por estas dos variables
+		
+	bloque11: db 1		;Las variabes bloque sirven para tener control de cuales bloques ya han sido eliminados
+	bloque12: db 1
+	bloque13: db 1
+	bloque14: db 1
+	bloque15: db 1
+	bloque16: db 1
+	bloque21: db 1
+	bloque22: db 1
+	bloque23: db 1
+	bloque24: db 1
+	bloque25: db 1
+	bloque26: db 1
+	bloque31: db 1
+	bloque32: db 1
+	bloque33: db 1
+	bloque34: db 1
+	bloque35: db 1
+	bloque36: db 1
+	
+	posY_tabla: db 5		;Las variables de posicion de la tabla y la pelota
+	posY_bola: db 6
+	posX_tabla: db 21
+	posX_bola: db 25
 	
 	saludo: db 0xa,'Bienvenido a Micronoid', 0xa 								;Mensaje de bienvenida al juego
 	saludo_length: equ $-saludo 											;Tamano de la variable saludo
@@ -30,10 +59,10 @@ section .data
 	msjUser_length: equ $-msjUser 										;Longitud de msj de nombre del usuario
 	
 	
-	msjintentos: db 0xa,'Intentos Restantes: *'							;Encabezado de mensaje de intentos restantes
+	msjintentos: db 0xa,'Intentos Restantes: '							;Encabezado de mensaje de intentos restantes
 	msjintentos_tamano: equ $-msjintentos
 	
-	encabezadoNombre: db 'Nombre: *'	 								;Encabezado de mensaje de intentos restantes
+	encabezadoNombre: db 'Nombre: '	 								;Encabezado de mensaje de intentos restantes
 	encabezadoNombre_tamano: equ $-encabezadoNombre
 	
 	numero1:	db '1'													;Variables char que sirven para escribir los numeros 1 al 3
@@ -69,42 +98,12 @@ section .data
 	parte5: db '+________________________|________________________+',0xa	;Parte 5 para el area de juego
 	parte5_tamano: equ $-parte5								;Tamaño de la variable 
 	
-	cambiodelinea: db '*',0xa										;linea vacia para el area de juego
+	cambiodelinea: db ' ',0xa										;linea vacia para el area de juego
 	cambiodelinea_tamano: equ $-cambiodelinea							;Tamaño de la variable 
 	
 	lineavacia: db '#',0xa										;linea vacia para el area de juego
 	lineavacia_tamano: equ $-lineavacia			
 	
-	
-	
-	;intentos: db 3			;Variable que indica el numero de intentos que el usuario tiene en el juego
-	
-	bloquesY: db 0			;Para uso de la funcion BorraBloque, los indices de los bloques al chocar estan 
-	bloquesX: db 0			;regidos por estas dos variables
-		
-	bloque11: db 1		;Las variabes bloque sirven para tener control de cuales bloques ya han sido eliminados
-	bloque12: db 1
-	bloque13: db 1
-	bloque14: db 1
-	bloque15: db 1
-	bloque16: db 1
-	bloque21: db 1
-	bloque22: db 1
-	bloque23: db 1
-	bloque24: db 1
-	bloque25: db 1
-	bloque26: db 1
-	bloque31: db 1
-	bloque32: db 1
-	bloque33: db 1
-	bloque34: db 1
-	bloque35: db 1
-	bloque36: db 1
-	
-	posY_tabla: db 0		;Las variables de posicion de la tabla y la pelota
-	posY_bola: db 0
-	posX_tabla: db 0
-	posX_bola: db 0
 	dir_mov_X: db '+'		;Por cuestion de control, se tienen las variables de en que direccion de movimiento se encuentra la pelota
 	dir_mov_Y: db '+'
 	
@@ -150,6 +149,12 @@ section .text
 	;globales para la funcion "cursor_origen"
 	global _loop2
 	global _nombreyvidas
+	global _terminar2
+	
+	;globales para la funcion de juego principal
+	global _etiquetaprincipal1
+	global _etiquetaprincipal2
+	global _etiquetaprincipal3
 
 
 
@@ -196,7 +201,7 @@ _start:
 	mov rax,0          			;rax = sys_read
 	mov rdi,0          			;rdi = teclado (standar input)
 	mov rsi,nameUser   		;direccion de memoria donde se almacena nombre del usuario
-	mov rdx,7				;numero de bytes (teclas presionadas antes de enter) a almacenar 
+	mov rdx,20				;numero de bytes (teclas presionadas antes de enter) a almacenar 
 	syscall
 	
 	;Apagar modo canonico y el modo echo
@@ -205,9 +210,7 @@ _start:
 	
 	;Inicializar las variables del juego
 	;call inicializar
-		;Inicializando el registro de intentos (r15)
-		mov r15, 3				;El usuario tiene 3 intentos inicialmente
-
+	
 	;Limpieza de pantalla
 	call limpiar_pantalla
 	
@@ -215,7 +218,9 @@ _start:
 	call imprimir_area_juego
 	
 	;Colocar el cursor en la posicion de origen para iniciar el juego
-	;call cursor_origen
+	call cursor_origen
+	
+	
 	
 	
 	
@@ -356,7 +361,7 @@ limpiar_pantalla:
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
-;Funcion encargada de limpiar la pantalla
+;Funcion encargada de imprimir el area de juego
 imprimir_area_juego:
 	mov r9, 2					;Se inicializa el registro contador r9 en 2, ya que se imprime la primera linea de forma estatica
 
@@ -431,6 +436,13 @@ _imprimir_parte5:
 	syscall
 	
 	;--------------------------
+	
+	mov rax, 1					;Cambio de linea
+	mov rdi, 1					
+	mov rsi, cambiodelinea			
+	mov rdx, cambiodelinea_tamano 	
+	syscall
+	
 	mov rax, 1					;Una vez impresas las partes del area de juego, se procede a imprimir
 	mov rdi, 1					;el nombre de usuario en la parte inferior, iniciando por el encabezado.
 	mov rsi, encabezadoNombre			
@@ -441,13 +453,7 @@ _imprimir_parte5:
 	mov rdi, 1					;el nombre de usuario en la parte inferior, iniciando por el encabezado.
 	mov rsi, nameUser			
 	mov rdx, 20	
-	syscall
-	
-	mov rax, 1					;Cambio de linea
-	mov rdi, 1					
-	mov rsi, cambiodelinea			
-	mov rdx, cambiodelinea_tamano 	
-	syscall
+	syscall	
 	
 	mov rax, 1					;Ademas del nombre, se imprime tambien la cantidad de intentos
 	mov rdi, 1	
@@ -455,8 +461,11 @@ _imprimir_parte5:
 	mov rdx, msjintentos_tamano	
 	syscall
 	
+_etiqueta1:	
+	mov r15, [intentos]
+_etiqueta2:
 	
-	cmp r15, 1					;Se compara el registro r15 (el valor de intentos)	para establecer lque numero imprimir
+	cmp r15, 1					;Se compara el registro r15 (el valor de intentos) para establecer lque numero imprimir
 	je _intentos1
 	cmp r15, 2
 	je _intentos2
@@ -504,26 +513,30 @@ _terminar:
 ;Funcion encargada de colocar el cursor en el origen de coordenadas cuando se imprime el area de juego.
 ;Lo realiza mediante el movimiento con codigos de escape ANSI 50 veces hacia la izquierda (50 es el ancho
 ;total del area de juego.
-;cursor_origen:
+cursor_origen:
 	
-;	mov r9,0				;Se inicializa el registro contador r9 con un valor entero de 0
+	mov r9,0				;Se inicializa el registro contador r9 con un valor entero de 0
 
-;_loop2:
+_loop2:
 	
-;	cmp r9, 50			;Se compara con el valor total de columnas
-;	je _nombreyvidas		;Si es igual, se envia a la etiqueta de finalizacion de funcion
+	cmp r9, 5			;Se compara con el valor total de columnas
+	je _terminar
+	mov rax, 1			;Se cargan los registros con los valores correspondientes y variables ANSI
+	mov rdi, 1	
+	mov rsi, arriba			
+	mov rdx, arriba_tamano	
+	syscall				;Se llama al sistema
+	inc r9				;Se incrementa en una unidad el registro contador r9
+	jmp _loop2			;Se salta incondicionalmente a loop2 para proceder a una nueva iteracion
 	
-;	mov rax, 1			;Se cargan los registros con los valores correspondientes y variables ANSI
-;	mov rdi, 1	
-;	mov rsi, izquierda			
-;	mov rdx, izquierda_tamano	
-;	syscall				;Se llama al sistema
-;	inc r9				;Se incrementa en una unidad el registro contador r9
-;	jmp _loop2			;Se salta incondicionalmente a loop2 para proceder a una nueva iteracion
-	
-	
-;	ret		
+_terminar2:
+	ret		
 ;Fin de la funcion
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que 
+	
 
 	
 ;-------------------------------------------------------------------------------------------------------------------------------------
@@ -532,7 +545,4 @@ _terminar:
 
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ;COMANDO DE EMSAMBLAJE
-;nasm -f elf64 -o name.o name.asm 
-;ld -o ejecutable_name name.o 
-;./ejecutable_name
-
+;nasm -f elf64 -o principal.o CodigoPrincipal.asm && ld -o mainexe principal.o && ./mainexe
