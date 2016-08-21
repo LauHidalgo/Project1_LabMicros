@@ -58,8 +58,8 @@
 %endmacro
 
 
-
 ;-------------------------------------------------------------------------------------------------------------------------------------
+
 
 
 ;////////////////////////////////////////////////////////////////////	Definicion de variables	////////////////////////////////////////////////////////////////////
@@ -72,6 +72,8 @@ section .data
 	linea_bola: 	db '|                        @                       |',  0xa
 	linea_tabla: 	db '|                     =======                    |',  0xa
 	linea_base: 	db '|------------------------|-----------------------|', 0xa
+	pelota:		db '@'
+	tabla: 		db '=======',  0xa
 	
 	;Mensajes especiales para el area de juego
 	msj_press_x:			db '|         > Presione X para continuar <          |', 0xa
@@ -120,15 +122,13 @@ section .data
 	
 	intentos: dq 3			;Variable que indica el numero de intentos que el usuario tiene en el juego
 	
-	arriba db 0x1b, "[1A" 			;Codigo ANSI para mover el cursor 1 posicion hacia arriba
-	abajo db 0x1b, "[1B" 			;Codigo ANSI para mover el cursor 1 posicion hacia abajo
-	derecha db 0x1b, "[1C" 			;Codigo ANSI para mover el cursor 1 posicion hacia la derecha
-	izquierda db 0x1b, "[1D" 			;Codigo ANSI para mover el cursor 1 posicion hacia la izquierda
+	arriba: db 0x1b, "[1A" 			;Codigo ANSI para mover el cursor 1 posicion hacia arriba
+	abajo: db 0x1b, "[1B" 			;Codigo ANSI para mover el cursor 1 posicion hacia abajo
+	derecha: db 0x1b, "[1C" 			;Codigo ANSI para mover el cursor 1 posicion hacia la derecha
+	izquierda: db 0x1b, "[1D" 			;Codigo ANSI para mover el cursor 1 posicion hacia la izquierda
 	cursor_tamano: equ $-izquierda	
 	
-	bloquesY: db 0			;Para uso de la funcion BorraBloque, los indices de los bloques al chocar estan 
-	bloquesX: db 0			;regidos por estas dos variables
-		
+
 	bloque11: db 1		;Las variabes bloque sirven para tener control de cuales bloques ya han sido eliminados
 	bloque12: db 1
 	bloque13: db 1
@@ -149,12 +149,15 @@ section .data
 	bloque36: db 1
 	
 	
-	posY_tabla: db 5		;Las variables de posicion de la tabla y la pelota
-	posY_bola: db 6
-	posX_tabla: db 21
-	posX_bola: db 25
+	posY_tabla: dq 3		;Las variables de posicion de la tabla y la pelota
+	posY_bola: dq 4
+	posX_tabla: dq 22
+	posX_bola: dq 25
 	
-	dir_mov_X: db '+'		;Por cuestion de control, se tienen las variables de en que direccion de movimiento se encuentra la pelota
+	deltaY:	dq	0		;Las variables de cantidad de desplazamiento
+	deltaX:	dq	0
+	
+	dir_mov_X: db '+'		;Las variablesde direccion de movimiento de la pelota
 	dir_mov_Y: db '+'
 
 
@@ -219,9 +222,21 @@ _start:
 	
 	;Se inicializan las variables de posicion de la pelota, tabla y los bloques
 		
-		
 	
-
+	;Se llama a la funcion para dibujar la tabla y la pelota 
+	call imprime_tabla_pelota
+	
+	;Se reinician los valores de posicion 
+	call reestablecer_valores
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	;Finalmente, se devuelven los recursos del sistema
 	;y se termina el programa
 	call echo_on	;se devuelve el modo echo al sistema
@@ -302,16 +317,9 @@ imprimirpantalla_normal:
 	loop_5:
 		impr_texto linea_blanca,tamano_linea
 		inc r8
-		cmp r8,20
+		cmp r8,24
 		jne loop_5
 			
-	
-	impr_texto linea_bola,tamano_linea
-	;se imprime la linea de la plataforma
-	impr_texto linea_tabla,tamano_linea
-	;se imprime la linea del piso
-	impr_texto linea_blanca,tamano_linea
-	impr_texto linea_blanca,tamano_linea
 	impr_texto linea_base,tamano_linea
 	call usuarioyvidas
 	
@@ -441,7 +449,8 @@ write_stdin_termios:
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
-;
+;Funcion que realiza 4 movimientos hacia arriba para colocar el cursor en el origen de coordenadas
+;del area de juego.
 cursor_inicial:
 	mov r8, 0
 	
@@ -455,7 +464,121 @@ cursor_inicial:
 	_fincursorinicial:
 	
 ret
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que dibuja los movimientos de la pelota y de la tabla segun la posicion en la que se encuentren
+imprime_tabla_pelota:
 	
+	;movimientos de la pelota
+	;----------------------------------
+	mov r8, 0
+	_imprimetablapelotaloop1:
+	cmp r8, [posX_bola]
+	je _ciclo1
+	impr_texto derecha, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop1
+	
+	_ciclo1:
+	mov r8, 0
+	_imprimetablapelotaloop2:
+	cmp r8, [posY_bola]
+	je _imprime_pelota
+	impr_texto arriba, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop2
+	
+	_imprime_pelota:
+	impr_texto pelota, 1
+	
+	mov r8, 0
+	mov r9, [posX_bola]
+	add r9, 1
+	_imprimetablapelotaloop3:
+	cmp r8, r9
+	je _ciclo2
+	impr_texto izquierda, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop3
+	
+	_ciclo2:
+	mov r8, 0
+	_imprimetablapelotaloop4:
+	cmp r8, [posY_bola]
+	je _ciclo3
+	impr_texto abajo, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop4
+	
+	;movimientos de la tabla
+	;----------------------------------
+	_ciclo3:
+	mov r8, 0
+	_imprimetablapelotaloop5:
+	cmp r8, [posX_tabla]
+	je _ciclo4
+	impr_texto derecha, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop5
+	
+	_ciclo4:
+	mov r8, 0
+	_imprimetablapelotaloop6:
+	cmp r8, [posY_tabla]
+	je _imprime_tabla
+	impr_texto arriba, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop6
+	
+	_imprime_tabla:
+	impr_texto tabla, 7
+	
+	mov r8, 0	
+	mov r9, [posX_tabla]
+	add r9, 7
+	_imprimetablapelotaloop7:
+	cmp r8, r9
+	je _ciclo5
+	impr_texto izquierda, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop7
+	
+	_ciclo5:
+	mov r8, 0
+	_imprimetablapelotaloop8:
+	cmp r8, [posY_tabla]
+	je _finalimprimetablapelota
+	impr_texto abajo, cursor_tamano
+	inc r8
+	jmp _imprimetablapelotaloop8
+	
+	_finalimprimetablapelota:
+	ret
+;Fin de la funcion
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que reestablece los valores de las variables de posicion y movimiento
+reestablecer_valores:
+	mov r8, 3
+	mov [posY_tabla], r8
+	mov r8, 4
+	mov [posY_bola], r8
+	mov r8, 22
+	mov [posX_tabla], r8
+	mov r8, 25
+	mov [posX_bola], r8
+	mov r8,0
+	mov al, '+'
+	mov [dir_mov_X], al
+	mov [dir_mov_Y], al
+	
+ret	
+;Fin de la funcion
+
+
+
 ;-------------------------------------------------------------------------------------------------------------------------------------
 ;FIN DEL CODIGO FUENTE	
 ;-------------------------------------------------------------------------------------------------------------------------------------
