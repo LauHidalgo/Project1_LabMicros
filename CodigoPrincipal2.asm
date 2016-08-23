@@ -73,9 +73,10 @@ section .data
 	linea_tabla: 	db '|                     =======                    |',  0xa
 	linea_base: 	db '|------------------------|-----------------------|', 0xa
 	pelota:		db '@'
-	tabla: 		db '=======',  
+	tabla: 		db '======='
 	pelota_borrar:		db ' '
-	tabla_borrar: 		db '       ',  
+	tabla_borrar: 		db '       '  
+	bloques_borrar:	db '      '
 	
 	
 	;Mensajes especiales para el area de juego
@@ -154,16 +155,18 @@ section .data
 	
 	posY_tabla: dq 3		;Las variables de posicion de la tabla y la pelota
 	posY_bola: dq 4
+	posY_bloque: dq 0
 	posX_tabla: dq 22
 	posX_bola: dq 25
+	posX_bloque: dq 0
 	
 	deltaY:	dq	0		;Las variables de cantidad de desplazamiento
 	deltaX:	dq	0
 	
 	dir_mov_X: db '+'		;Las variablesde direccion de movimiento de la pelota
 	dir_mov_Y: db '+'
-
-
+	
+	
 ;segmento de datos no-inicializados, que se pueden usar para capturar variables 
 ;del usuario, por ejemplo: desde el teclado
 section .bss
@@ -224,7 +227,9 @@ _start:
 	call cursor_inicial
 	
 	;Se llama a la funcion para dibujar la tabla y la pelota 
+	;call imprime_tabla_pelota  XXXX
 	call imprime_tabla_pelota
+	
 	
 	;Se reinician los valores de posicion 
 	call reestablecer_valores
@@ -454,16 +459,16 @@ write_stdin_termios:
 ;Funcion que realiza 4 movimientos hacia arriba para colocar el cursor en el origen de coordenadas
 ;del area de juego.
 cursor_inicial:
-	mov r8, 0
+	mov r8, 0						;Se carga el registro r8 con un cero
 	
-	_cursorincialloop:
-	cmp r8, 4
-	je _fincursorinicial
-	impr_texto arriba, cursor_tamano
-	inc r8
-	jmp _cursorincialloop
+	_cursorincialloop:					;Etiqueta para realizar el salto
+	cmp r8, 4						;Se compara r8 con 4
+	je _fincursorinicial					;Si el registro contador es igual a 4, se termina la funcion
+	impr_texto arriba, cursor_tamano	;Se imprime el codigo ESC-ANSI para mover el cursor para arriba
+	inc r8							;Se incrementa en 1 unidad el registro contador r8
+	jmp _cursorincialloop				;Se devuelve a la etiqueta para realizar el dato
 	
-	_fincursorinicial:
+	_fincursorinicial:					;Etiqueta que indica el fin de la funcion
 	
 ret
 
@@ -474,47 +479,51 @@ imprime_tabla_pelota:
 	
 	;movimientos de la pelota
 	;----------------------------------
-	mov r8, 0
+	mov r8, 0							;Se inicializa el registro contador r8
 	_imprimetablapelotaloop1:
-	cmp r8, [posX_bola]
-	je _ciclo1
-	impr_texto derecha, cursor_tamano
-	inc r8
-	jmp _imprimetablapelotaloop1
+	cmp r8, [posX_bola]					;Se compara el contador con el registro
+	je _ciclo1								;Si se completan los movimientos a la derecha, se pasan a los movimientos verticales
+	impr_texto derecha, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _imprimetablapelotaloop1				;Retorno a un nuevo ciclo
 	
 	_ciclo1:
-	mov r8, 0
-	_imprimetablapelotaloop2:
-	cmp r8, [posY_bola]
-	je _imprime_pelota
-	impr_texto arriba, cursor_tamano
-	inc r8
-	jmp _imprimetablapelotaloop2
+	mov r8, 0							;Se reinicia el registro contador
+	_imprimetablapelotaloop2:				
+	cmp r8, [posY_bola]					
+	je _imprime_pelota						;Si ya se han completado los movimientos hacia arriba, se pasa a imprimir la pelota
+	impr_texto arriba, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _imprimetablapelotaloop2				;Retorno a un nuevo ciclo
 	
 	_imprime_pelota:
-	impr_texto pelota, 1
+	impr_texto pelota, 1						;Impresion de la pelota
 	
-	mov r8, 0
-	mov r9, [posX_bola]
-	add r9, 1
+	mov r8, 0							;Reinicio del registro contador
+	mov r9, [posX_bola]					;Se carga la posicion de la pelota 
+	add r9, 1								;Se agrega un 1 a la posicion de la pelota, para contrarrestar el offset generado por el codigo ANSI
 	_imprimetablapelotaloop3:
-	cmp r8, r9
+	cmp r8, r9							;Si ya se acabaron los movimientos a la izquierda, se pasa a los movimientos hacia abajo
 	je _ciclo2
-	impr_texto izquierda, cursor_tamano
-	inc r8
-	jmp _imprimetablapelotaloop3
+	impr_texto izquierda, cursor_tamano		;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _imprimetablapelotaloop3				;Retorno a un nuevo ciclo
 	
 	_ciclo2:
-	mov r8, 0
-	_imprimetablapelotaloop4:
-	cmp r8, [posY_bola]
+	mov r8, 0							;Se reinicia el registro contador
+	_imprimetablapelotaloop4:			
+	cmp r8, [posY_bola]					;Si ya se realizaron los movimientos hacia abajo, entonces se pasa al proceso de imprimir la tabla
 	je _ciclo3
-	impr_texto abajo, cursor_tamano
-	inc r8
-	jmp _imprimetablapelotaloop4
+	impr_texto abajo, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en 1 unidad el registro contador
+	jmp _imprimetablapelotaloop4				;Retorno a un nuevo ciclo
 	
 	;movimientos de la tabla
 	;----------------------------------
+	
+	;Nota importante: El procedimiento que se sigue para imprimir la tabla es el mismo que en la pelota, asi que los
+	;comentarios para esta seccion no son necesarios.
+	
 	_ciclo3:
 	mov r8, 0
 	_imprimetablapelotaloop5:
@@ -538,7 +547,7 @@ imprime_tabla_pelota:
 	
 	mov r8, 0	
 	mov r9, [posX_tabla]
-	add r9, 7
+	add r9, 7						;Se agregan 7 unidades a la posicion original debido al offset generado por la impresion de la tabla
 	_imprimetablapelotaloop7:
 	cmp r8, r9
 	je _ciclo5
@@ -564,19 +573,19 @@ imprime_tabla_pelota:
 ;Funcion que reestablece los valores de las variables de posicion y movimiento
 reestablecer_valores:
 	mov r8, 3
-	mov [posY_tabla], r8
+	mov [posY_tabla], r8	;Reestablecimiento del valor vertical de la pelota
 	mov r8, 4
-	mov [posY_bola], r8
+	mov [posY_bola], r8		;Reestablecimiento del valor horizontal de la pelota
 	mov r8, 22
-	mov [posX_tabla], r8
+	mov [posX_tabla], r8	;Reestablecimiento del valor horizontal de la tabla
 	mov r8, 25
-	mov [posX_bola], r8
+	mov [posX_bola], r8	;Reestablecimiento del valor vertical de la tabla
 	mov r8,0
 	mov al, '+'
-	mov [dir_mov_X], al
-	mov [dir_mov_Y], al
+	mov [dir_mov_X], al	;Reestablecimiento de la direccion de movimiento horizontal
+	mov [dir_mov_Y], al		;Reestablecimiento de la direccion de movimiento vertical
 	mov r8, 1
-	mov [bloque11], r8
+	mov [bloque11], r8		;Reestablecimiento del estado de los bloques
 	mov [bloque12], r8
 	mov [bloque13], r8
 	mov [bloque14], r8
@@ -619,13 +628,13 @@ modificar_direccion:
 			;if equal comandos
 			mov al, '-'			;Si la condicion es positiva, se cambia dir_mov_X a negativo
 			mov [dir_mov_X], al
-			jmp _m_p_final
+			jmp _m_p_final		;Salto al final de la funcion
 			
 			;if not comandos
 			_m_p_jmp1_1:			
 			mov al, '+'			;Si la condicion es negativa, se cambia dir_mov_X a positivo
 			mov [dir_mov_X], al
-			jmp _m_p_final
+			jmp _m_p_final		;Salto al final de la funcion
 	
 	
 	
@@ -635,38 +644,52 @@ modificar_direccion:
 		jne _m_p_jmp2			;Si no es igual, entonces se salta a la tercera comparacion
 		
 		;if equal
-		jmp _m_p_jmp1_2			;Si es igual, el procedimiento es el mismo que la comparacion 1, por lo tanto se salta hacia ahi.
+		jmp _m_p_jmp1_2		;Si es igual, el procedimiento es el mismo que la comparacion 1, por lo tanto se salta hacia ahi.
 		
 		
-	_m_p_jmp2
+		
+	_m_p_jmp2:					;Se realiza la tercera comparacion, si Y=29 (Pared superior del area de juego)
 	mov r8, [posY_bola]
 	
 	cmp r8, 29
 		;if  not
-		jne _m_p_final
+		jne _m_p_jmp3			;Si Y es distinto a 29, se salta a la cuarta comparacion
 		
 		;if equal
-		mov al, [dir_mov_Y]
-		cmp al, '+'
+		_m_p_jmp2_2:			;Etiqueta de salto que la cuarta condicion utilizara
+		mov al, [dir_mov_Y]		;Se carga el signo de la direccion del movimiento Y al registro de 8 bits AL
+		cmp al, '+'				
 			;if not
-			jne _m_p_jmp2_1
+			jne _m_p_jmp2_1		;Si la direccion del moviento no es positiva, se saltara a la etiqueta _m_p_jmp2_1
 			
 			;if equal comandos
-			mov al, '-'
+			mov al, '-'			;Si la direccion del movimiento es positiva, se cambia a negativa
 			mov [dir_mov_Y], al
-			jmp _m_p_final
+			jmp _m_p_final		;Salto al final de la funcion
 			
 			;if not comandos
-			_m_p_jmp2_1:
+			_m_p_jmp2_1:		;Si la direccion del movimiento es negativa, se cambia a positiva
 			mov al, '+'
 			mov [dir_mov_Y], al
-			jmp _m_p_final
-			
-	_m_p_final:
+			jmp _m_p_final		;Salto al final de la funcion
+	
+	
+	_m_p_jmp3:					;Se realiza la comparacion Y=4 (Altura de la plataforma en donde rebotara la pelota)
+	cmp r8, 4				
+		;if  not
+		jne _m_p_final			;Si no se cumple la condicion final, se salta al final de la funcion
+		
+		;if equal
+		jmp _m_p_jmp2_2		;Si se cumple esta condicion, el procedimiento es el mismo que con la tercera condicion
+	
+				
+	_m_p_final:					;Etiqueta de final de funcion
 
 ret
 ;Fin de la funcion
 
+
+;-------------------------------------------------------------------------------------------------------------------------------------
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
