@@ -227,12 +227,18 @@ _start:
 	call cursor_inicial
 	
 	;Se llama a la funcion para dibujar la tabla y la pelota 
-	;call imprime_tabla_pelota  XXXX
 	call imprime_tabla_pelota
 	
 	
 	;Se reinician los valores de posicion 
 	call reestablecer_valores
+	
+	;PRUEBA: Se borra el bloque 2-4
+	mov r8, 26
+	mov [posY_bloque], r8
+	mov r8, 26
+	mov [posX_bloque], r8
+	call borra_bloque
 	
 	
 	
@@ -566,6 +572,154 @@ imprime_tabla_pelota:
 	
 	_finalimprimetablapelota:
 	ret
+;Fin de la funcion
+
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que borra la pelota y de la tabla segun la posicion en la que se encuentren
+borra_tabla_pelota:
+	
+	;movimientos de la pelota
+	;----------------------------------
+	mov r8, 0							;Se inicializa el registro contador r8
+	_borratablapelotaloop1:
+	cmp r8, [posX_bola]					;Se compara el contador con el registro
+	je _ciclo6								;Si se completan los movimientos a la derecha, se pasan a los movimientos verticales
+	impr_texto derecha, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _borratablapelotaloop1				;Retorno a un nuevo ciclo
+	
+	_ciclo6:
+	mov r8, 0							;Se reinicia el registro contador
+	_borratablapelotaloop2:				
+	cmp r8, [posY_bola]					
+	je _borra_pelota						;Si ya se han completado los movimientos hacia arriba, se pasa a imprimir la pelota
+	impr_texto arriba, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _borratablapelotaloop2				;Retorno a un nuevo ciclo
+	
+	_borra_pelota:
+	impr_texto pelota_borrar, 1						;Impresion de la pelota
+	
+	mov r8, 0							;Reinicio del registro contador
+	mov r9, [posX_bola]					;Se carga la posicion de la pelota 
+	add r9, 1								;Se agrega un 1 a la posicion de la pelota, para contrarrestar el offset generado por el codigo ANSI
+	_borratablapelotaloop3:
+	cmp r8, r9							;Si ya se acabaron los movimientos a la izquierda, se pasa a los movimientos hacia abajo
+	je _ciclo7
+	impr_texto izquierda, cursor_tamano		;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _borratablapelotaloop3				;Retorno a un nuevo ciclo
+	
+	_ciclo7:
+	mov r8, 0							;Se reinicia el registro contador
+	_borratablapelotaloop4:			
+	cmp r8, [posY_bola]					;Si ya se realizaron los movimientos hacia abajo, entonces se pasa al proceso de imprimir la tabla
+	je _ciclo8
+	impr_texto abajo, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en 1 unidad el registro contador
+	jmp _borratablapelotaloop4				;Retorno a un nuevo ciclo
+	
+	;movimientos de la tabla
+	;----------------------------------
+	
+	;Nota importante: El procedimiento que se sigue para imprimir la tabla es el mismo que en la pelota, asi que los
+	;comentarios para esta seccion no son necesarios.
+	
+	_ciclo8:
+	mov r8, 0
+	_borratablapelotaloop5:
+	cmp r8, [posX_tabla]
+	je _ciclo9
+	impr_texto derecha, cursor_tamano
+	inc r8
+	jmp _borratablapelotaloop5
+	
+	_ciclo9:
+	mov r8, 0
+	_borratablapelotaloop6:
+	cmp r8, [posY_tabla]
+	je _borra_tabla
+	impr_texto arriba, cursor_tamano
+	inc r8
+	jmp _borratablapelotaloop6
+	
+	_borra_tabla:
+	impr_texto tabla_borrar, 7
+	
+	mov r8, 0	
+	mov r9, [posX_tabla]
+	add r9, 7						;Se agregan 7 unidades a la posicion original debido al offset generado por la impresion de la tabla
+	_borratablapelotaloop7:
+	cmp r8, r9
+	je _ciclo10
+	impr_texto izquierda, cursor_tamano
+	inc r8
+	jmp _borratablapelotaloop7
+	
+	_ciclo10:
+	mov r8, 0
+	_borratablapelotaloop8:
+	cmp r8, [posY_tabla]
+	je _finalborratablapelota
+	impr_texto abajo, cursor_tamano
+	inc r8
+	jmp _borratablapelotaloop8
+	
+	_finalborratablapelota:
+	ret
+;Fin de la funcion
+
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que borra un bloque segun la posicion en la que se encuentre
+borra_bloque:
+	
+	;movimientos del cursor
+	;----------------------------------
+	mov r8, 0							;Se inicializa el registro contador r8
+	_borrabloqueloop1:
+	cmp r8, [posX_bloque]					;Se compara el contador con el registro
+	je _ciclo11								;Si se completan los movimientos a la derecha, se pasan a los movimientos verticales
+	impr_texto derecha, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _borrabloqueloop1				;Retorno a un nuevo ciclo
+	
+	_ciclo11:
+	mov r8, 0							;Se reinicia el registro contador
+	_borrabloqueloop2:				
+	cmp r8, [posY_bloque]					
+	je _borra_bloque						;Si ya se han completado los movimientos hacia arriba, se pasa a imprimir la pelota
+	impr_texto arriba, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _borrabloqueloop2				;Retorno a un nuevo ciclo
+	
+	_borra_bloque:
+	impr_texto bloques_borrar, 6						;Impresion de la pelota
+	
+	mov r8, 0							;Reinicio del registro contador
+	mov r9, [posX_bloque]					;Se carga la posicion de la pelota 
+	add r9, 6								;Se agrega un 1 a la posicion de la pelota, para contrarrestar el offset generado por el codigo ANSI
+	_borrabloqueloop3:
+	cmp r8, r9							;Si ya se acabaron los movimientos a la izquierda, se pasa a los movimientos hacia abajo
+	je _ciclo12
+	impr_texto izquierda, cursor_tamano		;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en una unidad el registro contador
+	jmp _borrabloqueloop3				;Retorno a un nuevo ciclo
+	
+	_ciclo12:
+	mov r8, 0							;Se reinicia el registro contador
+	_borrabloqueloop4:			
+	cmp r8, [posY_bloque]					;Si ya se realizaron los movimientos hacia abajo, entonces se pasa al proceso de imprimir la tabla
+	je _final_borra_bloque
+	impr_texto abajo, cursor_tamano			;Ejecucion del movimiento mediante la impresion en pantalla del codigo ESC ANSI
+	inc r8								;Se incrementa en 1 unidad el registro contador
+	jmp _borrabloqueloop4				;Retorno a un nuevo ciclo
+	
+	_final_borra_bloque:
+	ret	
 ;Fin de la funcion
 
 
