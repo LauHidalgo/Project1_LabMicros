@@ -73,7 +73,10 @@ section .data
 	linea_tabla: 	db '|                     =======                    |',  0xa
 	linea_base: 	db '|------------------------|-----------------------|', 0xa
 	pelota:		db '@'
-	tabla: 		db '=======',  0xa
+	tabla: 		db '=======',  
+	pelota_borrar:		db ' '
+	tabla_borrar: 		db '       ',  
+	
 	
 	;Mensajes especiales para el area de juego
 	msj_press_x:			db '|         > Presione X para continuar <          |', 0xa
@@ -129,24 +132,24 @@ section .data
 	cursor_tamano: equ $-izquierda	
 	
 
-	bloque11: db 1		;Las variabes bloque sirven para tener control de cuales bloques ya han sido eliminados
-	bloque12: db 1
-	bloque13: db 1
-	bloque14: db 1
-	bloque15: db 1
-	bloque16: db 1
-	bloque21: db 1
-	bloque22: db 1
-	bloque23: db 1
-	bloque24: db 1
-	bloque25: db 1
-	bloque26: db 1
-	bloque31: db 1
-	bloque32: db 1
-	bloque33: db 1
-	bloque34: db 1
-	bloque35: db 1
-	bloque36: db 1
+	bloque11: dq 1		;Las variabes bloque sirven para tener control de cuales bloques ya han sido eliminados
+	bloque12: dq 1
+	bloque13: dq 1
+	bloque14: dq 1
+	bloque15: dq 1
+	bloque16: dq 1
+	bloque21: dq 1
+	bloque22: dq 1
+	bloque23: dq 1
+	bloque24: dq 1
+	bloque25: dq 1
+	bloque26: dq 1
+	bloque31: dq 1
+	bloque32: dq 1
+	bloque33: dq 1
+	bloque34: dq 1
+	bloque35: dq 1
+	bloque36: dq 1
 	
 	
 	posY_tabla: dq 3		;Las variables de posicion de la tabla y la pelota
@@ -220,14 +223,13 @@ _start:
 	;Se coloca el cursor en la posicion de inicio
 	call cursor_inicial
 	
-	;Se inicializan las variables de posicion de la pelota, tabla y los bloques
-		
-	
 	;Se llama a la funcion para dibujar la tabla y la pelota 
 	call imprime_tabla_pelota
 	
 	;Se reinician los valores de posicion 
 	call reestablecer_valores
+	
+	
 	
 	
 	
@@ -573,8 +575,96 @@ reestablecer_valores:
 	mov al, '+'
 	mov [dir_mov_X], al
 	mov [dir_mov_Y], al
-	
+	mov r8, 1
+	mov [bloque11], r8
+	mov [bloque12], r8
+	mov [bloque13], r8
+	mov [bloque14], r8
+	mov [bloque15], r8
+	mov [bloque16], r8
+	mov [bloque21], r8
+	mov [bloque22], r8
+	mov [bloque23], r8
+	mov [bloque24], r8
+	mov [bloque25], r8
+	mov [bloque26], r8
+	mov [bloque31], r8
+	mov [bloque32], r8
+	mov [bloque33], r8
+	mov [bloque34], r8
+	mov [bloque35], r8
+	mov [bloque36], r8
+		
 ret	
+;Fin de la funcion
+
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que modifica la direccion de la pelota cuando 
+modificar_direccion:
+	mov r8, [posX_bola]			;Se carga la posicion X de la bola 
+	
+	cmp r8, 1					;Se realiza la primera comparacion, si X=1 (pared izquierda del area de juego)
+		;if not
+		jne _m_p_jmp1			;Si no X no es igual a uno se pasa a la otra comparacion
+		
+		_m_p_jmp1_2:				;Etiqueta de salto para la segunda comparacion
+		;if equal
+		mov al, [dir_mov_X]		
+		cmp al, '+'				;Se compara el string de posicion
+			;if not
+			jne _m_p_jmp1_1		;Si no es positiva, se salta a la etiqueta _m_p_jmp1_1
+			
+			;if equal comandos
+			mov al, '-'			;Si la condicion es positiva, se cambia dir_mov_X a negativo
+			mov [dir_mov_X], al
+			jmp _m_p_final
+			
+			;if not comandos
+			_m_p_jmp1_1:			
+			mov al, '+'			;Si la condicion es negativa, se cambia dir_mov_X a positivo
+			mov [dir_mov_X], al
+			jmp _m_p_final
+	
+	
+	
+	_m_p_jmp1:					;Se realiza la segunda comparacion, si X=49 (pared derecha del area de juego)
+	cmp r8, 49
+		;if not
+		jne _m_p_jmp2			;Si no es igual, entonces se salta a la tercera comparacion
+		
+		;if equal
+		jmp _m_p_jmp1_2			;Si es igual, el procedimiento es el mismo que la comparacion 1, por lo tanto se salta hacia ahi.
+		
+		
+	_m_p_jmp2
+	mov r8, [posY_bola]
+	
+	cmp r8, 29
+		;if  not
+		jne _m_p_final
+		
+		;if equal
+		mov al, [dir_mov_Y]
+		cmp al, '+'
+			;if not
+			jne _m_p_jmp2_1
+			
+			;if equal comandos
+			mov al, '-'
+			mov [dir_mov_Y], al
+			jmp _m_p_final
+			
+			;if not comandos
+			_m_p_jmp2_1:
+			mov al, '+'
+			mov [dir_mov_Y], al
+			jmp _m_p_final
+			
+	_m_p_final:
+
+ret
 ;Fin de la funcion
 
 
