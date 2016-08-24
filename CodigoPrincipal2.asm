@@ -154,26 +154,26 @@
 
 section .data
 	;Definicion de las lineas especiales de texto para diujar el area de juego
-	linea_techo: 	db '|------------------------------------------------|', 0xa
-	linea_bloques:	db '| ######  ######  ######  ######  ######  ###### |', 0xa
-	linea_blanca: 	db '|                                                |', 0xa
-	linea_bola: 	db '|                        @                       |',  0xa
-	linea_tabla: 	db '|                     =======                    |',  0xa
-	linea_base: 	db '|------------------------|-----------------------|', 0xa
+	linea_techo: 	db '|-------------------------------------------------|', 0xa
+	linea_bloques:	db '| ####### ####### ####### ####### ####### ####### |', 0xa
+	linea_blanca: 	db '|                                                 |', 0xa
+	linea_bola: 	db '|                         @                       |',  0xa
+	linea_tabla: 	db '|                      =======                    |',  0xa
+	linea_base: 	db '|-------------------------|-----------------------|', 0xa
 	pelota:		db '@'
 	tabla: 		db '======='
 	pelota_borrar:		db ' '
 	tabla_borrar: 		db '       '  
-	bloques_borrar:	db '      '
+	bloques_borrar:	db '       '
 	
 	
 	;Mensajes especiales para el area de juego
-	msj_press_x:			db '|         > Presione X para continuar <          |', 0xa
-	msj_vida_menos:		db '|             > Ha perdido una vida <            |', 0xa
-	msj_game_over:		db '|              > Fin del juego... <              |', 0xa	
+	msj_press_x:			db '|          > Presione X para continuar <          |', 0xa
+	msj_vida_menos:		db '|              > Ha perdido una vida <            |', 0xa
+	msj_game_over:		db '|               > Fin del juego... <              |', 0xa	
 	
 	;Lineas anteriores son del mismo tamano, entonces se maneja como una constante
-	tamano_linea: 		equ 51
+	tamano_linea: 		equ 52
 
 	;Lineas para excribir el nombre de usuairo y las vidas restantes
 	msj_encabezado_nombre:	db '>>> Usuario: '
@@ -244,22 +244,21 @@ section .data
 	posY_tabla: dq 3		;Las variables de posicion de la tabla y la pelota
 	posY_bola: dq 4
 	posY_bloque: dq 0
-	posX_tabla: dq 22	
-	posX_bola: dq 25
+	posX_tabla: dq 24	
+	posX_bola: dq 23
 	posX_bloque: dq 0
 	
 	deltaY:	dq	0		;Las variables de cantidad de desplazamiento
 	deltaX:	dq	0
 	
-	dir_mov_X: db '+'		;Las variablesde direccion de movimiento de la pelota
-	dir_mov_Y: db '+'
+	dir_mov_X: dq '+'		;Las variablesde direccion de movimiento de la pelota
+	dir_mov_Y: dq '+'
 	
-	temporal2: db '-'
+	teclado: dq '-'
 	
 ;segmento de datos no-inicializados, que se pueden usar para capturar variables 
 ;del usuario, por ejemplo: desde el teclado
 section .bss
-	temporal: resq 1
 	userName: resb 20
 	
 ;-------------------------------------------------------------------------------------------------------------------------------------
@@ -279,10 +278,8 @@ _start:
 	;Imprime primera pantalla de bienvenida
 
 	;Se enciende el modo canonico
-	;call canonical_on 
 	canonical_on ICANON,termios
-	;call echo_on
-	
+		
 	;Se imprime la pantalla inicial
 	impr_texto saludo,saludo_length
 	impr_texto infoCurso,infoCurso_length
@@ -293,7 +290,6 @@ _start:
 	leer_texto userName,20
 	
 	;Apagar el modo canonico
-	;call canonical_off
 	canonical_off ICANON,termios
 	call echo_off
 
@@ -305,8 +301,8 @@ _start:
 
 	;Esperar a leer la tecla X para ingresar al juego
 	_leer_press_x:
-	leer_texto temporal2,1	
-	mov r15, [temporal2]
+	leer_texto teclado,1	
+	mov r15, [teclado]
 	cmp r15, 'x'
 	jne _leer_press_x
 	
@@ -317,35 +313,32 @@ _start:
 	;Se coloca el cursor en la posicion de inicio
 	call cursor_inicial
 	
-	;Se llama a la funcion para dibujar la tabla y la pelota 
-	;call imprime_tabla_pelota
-	
+		
 	
 	;Se reinician los valores de posicion 
 	call reestablecer_valores
 	
-	;PRUEBA: Se borra el bloque 2-4
-	mov r8, 26
-	mov [posY_bloque], r8
-	mov r8, 26
-	mov [posX_bloque], r8
-	call borra_bloque
-	
 	
 	
 	;///////////////////////////////////////////////////
+	;///////////////////////////////////////////////////
+	;///////////////////////////////////////////////////
 	;EXCLUSIVAMENTE PARA PRUEBAS
 	
-	mov r14, 0
+	mov r14, 1
+	mov [deltaY], r14
+	mov r14, 5
+	mov [deltaX], r14
+	
 	
 	_loopdeprueba:
 
 	call imprime_tabla_pelota	
 	
-	leer_texto temporal2,1	
-	mov r15, [temporal2]
+	leer_texto teclado,1	
+	mov r15, [teclado]
 	
-	cmp r15, 'x'
+	cmp r15, 'p'
 	je _final_ejecucion
 	
 	cmp r15, 'z'
@@ -355,25 +348,40 @@ _start:
 	je _mov_derecha
 	
 	call borra_tabla_pelota
-	mov [temporal2], r14
-	jmp _loopdeprueba	
+	jmp _siguiente
 	
 	_mov_izquierda:
 	call borra_tabla_pelota
 	call tabla_izquierda	
-	mov [temporal2], r14	
-	jmp _loopdeprueba		
+	jmp _siguiente	
 	
 	_mov_derecha:
 	call borra_tabla_pelota
 	call tabla_derecha	
-	mov [temporal2], r14
-	jmp _loopdeprueba	
+	jmp _siguiente
+	
+	_siguiente:
+	
+	call borra_tabla_pelota
+	
+	call modificar_posicion
+	
+	mov r8, posX_bloque
+	cmp r8, 0
+	je _loopdeprueba
+	
+	call borra_bloque
+	cmp r8, 0
+	mov [posX_bloque], r8 
+	mov [posY_bloque], r8 
+	jmp _loopdeprueba
 	
 	
 	_final_ejecucion:
 	limpiar_pantalla clean,clean_tam
 	;EXCLUSIVAMENTE PARA PRUEBAS
+	;///////////////////////////////////////////////////
+	;///////////////////////////////////////////////////
 	;///////////////////////////////////////////////////
 	
 	
@@ -499,28 +507,6 @@ usuarioyvidas:
 	impr_texto nueva_linea, nueva_linea_length
 	ret
 ;Final de la funcion	
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Se enciende modo canonico de Linux. Linux espera un ENTER
-;para procesar la captura del teclado
-canonical_on:
-	call read_stdin_termios 			;Funcion que lee estado actual de TERMIOS en STDIN
-	or dword [termios+12], ICANON	;Escribe nuevo valor del modo canonico
-	call write_stdin_termios 			;Escribe nueva configuracion de TERMIOS
-	ret
-;Final de la Funcion
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Se apaga el modo canonico de Linux. 
-canonical_off:
-	call read_stdin_termios  	;Funcion que lee estado actual de TERMIOS en STDIN
-	mov rax, ICANON		;Carga el valor de ICANON al registro RAX
-	not rax				;Invierte el valor de los bits de RAX
-	and [termios+12], rax 	;Escribe nuevo valor del modo canonico
-	call write_stdin_termios	;Escribe nueva configuracion de TERMIOS
-	ret
-;Final de la Funcion
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
@@ -829,11 +815,11 @@ borra_bloque:
 	jmp _borrabloqueloop2				;Retorno a un nuevo ciclo
 	
 	_borra_bloque:
-	impr_texto bloques_borrar, 6						;Impresion de la pelota
+	impr_texto bloques_borrar, 7						;Impresion de la pelota
 	
 	mov r8, 0							;Reinicio del registro contador
 	mov r9, [posX_bloque]					;Se carga la posicion de la pelota 
-	add r9, 6								;Se agrega un 1 a la posicion de la pelota, para contrarrestar el offset generado por el codigo ANSI
+	add r9, 7								;Se agrega un 1 a la posicion de la pelota, para contrarrestar el offset generado por el codigo ANSI
 	_borrabloqueloop3:
 	cmp r8, r9							;Si ya se acabaron los movimientos a la izquierda, se pasa a los movimientos hacia abajo
 	je _ciclo12
@@ -862,14 +848,14 @@ reestablecer_valores:
 	mov [posY_tabla], r8	;Reestablecimiento del valor vertical de la pelota
 	mov r8, 4
 	mov [posY_bola], r8		;Reestablecimiento del valor horizontal de la pelota
-	mov r8, 22
+	mov r8, 23
 	mov [posX_tabla], r8	;Reestablecimiento del valor horizontal de la tabla
-	mov r8, 25
+	mov r8, 26
 	mov [posX_bola], r8	;Reestablecimiento del valor vertical de la tabla
 	mov r8,0
-	mov al, '+'
-	mov [dir_mov_X], al	;Reestablecimiento de la direccion de movimiento horizontal
-	mov [dir_mov_Y], al		;Reestablecimiento de la direccion de movimiento vertical
+	mov r14, '+'
+	mov [dir_mov_X], r14	;Reestablecimiento de la direccion de movimiento horizontal
+	mov [dir_mov_Y], r14		;Reestablecimiento de la direccion de movimiento vertical
 	mov r8, 1
 	mov [bloque11], r8		;Reestablecimiento del estado de los bloques
 	mov [bloque12], r8
@@ -906,21 +892,21 @@ modificar_direccion:
 		
 		_m_p_jmp1_2:				;Etiqueta de salto para la segunda comparacion
 		;if equal
-		mov al, [dir_mov_X]		
-		cmp al, '+'				;Se compara el string de posicion
+		mov r10, [dir_mov_X]		
+		cmp r10, '+'				;Se compara el string de posicion
 			;if not
 			jne _m_p_jmp1_1		;Si no es positiva, se salta a la etiqueta _m_p_jmp1_1
 			
 			;if equal comandos
-			mov al, '-'			;Si la condicion es positiva, se cambia dir_mov_X a negativo
-			mov [dir_mov_X], al
-			jmp _m_p_final		;Salto al final de la funcion
+			mov r10, '-'			;Si la condicion es positiva, se cambia dir_mov_X a negativo
+			mov [dir_mov_X], r10
+			jmp _m_p_jmp2		;Salto al final de la funcion
 			
 			;if not comandos
 			_m_p_jmp1_1:			
-			mov al, '+'			;Si la condicion es negativa, se cambia dir_mov_X a positivo
-			mov [dir_mov_X], al
-			jmp _m_p_final		;Salto al final de la funcion
+			mov r10, '+'			;Si la condicion es negativa, se cambia dir_mov_X a positivo
+			mov [dir_mov_X], r10
+			jmp _m_p_jmp2		;Salto al final de la funcion
 	
 	
 	
@@ -937,30 +923,62 @@ modificar_direccion:
 	_m_p_jmp2:					;Se realiza la tercera comparacion, si Y=29 (Pared superior del area de juego)
 	mov r8, [posY_bola]
 	
-	cmp r8, 29
+	cmp r8, 28
 		;if  not
 		jne _m_p_jmp3			;Si Y es distinto a 29, se salta a la cuarta comparacion
 		
 		;if equal
 		_m_p_jmp2_2:			;Etiqueta de salto que la cuarta condicion utilizara
-		mov al, [dir_mov_Y]		;Se carga el signo de la direccion del movimiento Y al registro de 8 bits AL
-		cmp al, '+'				
+		mov r10, [dir_mov_Y]		;Se carga el signo de la direccion del movimiento Y al registro de 8 bits AL
+		cmp r10, '+'				
 			;if not
 			jne _m_p_jmp2_1		;Si la direccion del moviento no es positiva, se saltara a la etiqueta _m_p_jmp2_1
 			
 			;if equal comandos
-			mov al, '-'			;Si la direccion del movimiento es positiva, se cambia a negativa
-			mov [dir_mov_Y], al
+			mov r10, '-'			;Si la direccion del movimiento es positiva, se cambia a negativa
+			mov [dir_mov_Y], r10
 			jmp _m_p_final		;Salto al final de la funcion
 			
 			;if not comandos
 			_m_p_jmp2_1:		;Si la direccion del movimiento es negativa, se cambia a positiva
-			mov al, '+'
-			mov [dir_mov_Y], al
+			mov r10, '+'
+			mov [dir_mov_Y], r10
 			jmp _m_p_final		;Salto al final de la funcion
 	
 	
 	_m_p_jmp3:					;Se realiza la comparacion Y=4 (Altura de la plataforma en donde rebotara la pelota)
+	cmp r8, 27				
+		;if  not
+		jne _m_p_jmp4		;Si no se cumple la condicion final, se salta al final de la funcion
+		
+		;if equal
+		jmp _m_p_jmp2_2		;Si se cumple esta condicion, el procedimiento es el mismo que con la tercera condicion
+	
+	_m_p_jmp4:					;Se realiza la comparacion Y=4 (Altura de la plataforma en donde rebotara la pelota)
+	cmp r8, 26				
+		;if  not
+		jne _m_p_jmp5		;Si no se cumple la condicion final, se salta al final de la funcion
+		
+		;if equal
+		jmp _m_p_jmp2_2		;Si se cumple esta condicion, el procedimiento es el mismo que con la tercera condicion
+	
+	_m_p_jmp5:					;Se realiza la comparacion Y=4 (Altura de la plataforma en donde rebotara la pelota)
+	cmp r8, 25				
+		;if  not
+		jne _m_p_jmp6		;Si no se cumple la condicion final, se salta al final de la funcion
+		
+		;if equal
+		jmp _m_p_jmp2_2		;Si se cumple esta condicion, el procedimiento es el mismo que con la tercera condicion
+		
+	_m_p_jmp6:					;Se realiza la comparacion Y=4 (Altura de la plataforma en donde rebotara la pelota)
+	cmp r8, 24				
+		;if  not
+		jne _m_p_jmp7		;Si no se cumple la condicion final, se salta al final de la funcion
+		
+		;if equal
+		jmp _m_p_jmp2_2		;Si se cumple esta condicion, el procedimiento es el mismo que con la tercera condicion
+	
+	_m_p_jmp7:					;Se realiza la comparacion Y=4 (Altura de la plataforma en donde rebotara la pelota)
 	cmp r8, 4				
 		;if  not
 		jne _m_p_final			;Si no se cumple la condicion final, se salta al final de la funcion
@@ -982,7 +1000,7 @@ tabla_derecha:
 	
 	mov r8, [posX_tabla]	;Se carga la posicion en r8
 	
-	cmp r8, 42			;Se compara la posicion de r8 con la posicion maxima a la derecha que puede tener la tabla 
+	cmp r8, 43			;Se compara la posicion de r8 con la posicion maxima a la derecha que puede tener la tabla 
 						;para no exceder los limites del area de juego
 	
 	je _final_tabla_derecha	;Si la posicion ha llegado al limite derecho, no se agrega nada y se salta directamente al final de la funcion
@@ -1019,7 +1037,643 @@ tabla_izquierda:
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que realiza los cambios en los movimientos de la pelota, teniendo en cuenta la cantidad de espacios
+;verticales y horizontales por ciclo que se deben hacer
+modificar_posicion:
 
+	mov r8, [dir_mov_X]			
+	mov r9, [dir_mov_Y]	
+	mov r10, [posX_bola]	;Se carga la posicion X de la pelota en el registro general r10
+	mov r11, [posY_bola]	;Se carga la posicion Y de la pelota en el registro general r11
+	mov r12, [deltaX]		;Se carga la cantidad de movimientos en X por ciclo que realiza la bola
+	mov r13, [deltaY]		;Se carga la cantidad de movimientos en Y por ciclo que realiza la bola
+	
+	
+	;MOVIMIENTOS VERTICALES
+	_movimientos_verticales:
+	
+	cmp r13, 0
+		jne	_comparaciones
+		
+		cmp r12, 0
+			je _cargadatos2		
+
+			jmp _movimientos_horizontales
+			
+			_cargadatos2:
+			mov  [posX_bola], r10	
+			mov [posY_bola], r11 	
+			jmp _fin_modificar_posicion			
+		
+	_comparaciones:
+	cmp r11, 28
+	je _accioneslinea28	
+	
+	cmp r11, 27
+	je _accioneslinea27	
+				
+	cmp r11, 26
+	je _accioneslinea26
+		
+	cmp r11, 25
+	je _accioneslinea25
+	
+	cmp r11, 24
+	je _accioneslinea24	
+		
+	cmp r11, 4
+	je _intersecciontabla
+								
+	cmp r11, 1
+	je _nomal	
+										
+			_movimientos_generales:
+				cmp r9, '+'
+				je _agregar_vertical
+															
+				dec r13	;Se decrementa en 1 la cantidad de elementos por sumar en Y
+				dec r11 	;Se decrementa en 1 unidad la posicion en Y de la pelota
+				jmp _movimientos_horizontales	;Una vez decrementado, se salta a los movimientos horizontales
+													
+			_agregar_vertical:
+				dec r13	;Se decrementa en 1 la cantidad de elementos por sumar en Y
+				inc r11 	;Se incrementa en 1 unidad la posicion en Y de la pelota
+				jmp _movimientos_horizontales	;Una vez incrementado, se salta a los movimientos horizontales
+													
+													
+			_accioneslinea28:
+				cmp r9, '+'	
+				mov  [posX_bola], r10	
+				mov [posY_bola], r11 	
+				call modificar_direccion
+				je _fin_modificar_posicion	
+				
+				;si no es positivo el movimiento...
+				jmp _interseccionbloquefila3	
+				
+
+			_accioneslinea27:
+				cmp r9, '+'	
+				je _interseccionbloquefila3
+				
+				;si no es positivo el movimiento...
+				jmp _interseccionbloquefila1	
+				
+				
+			_accioneslinea26:
+				cmp r9, '+'	
+				je _movimientos_generales	
+				
+				;si no es positivo el movimiento...
+				jmp _interseccionbloquefila2
+				
+				
+			_accioneslinea25:
+				cmp r9, '+'	
+				je _interseccionbloquefila2
+				
+				;si no es positivo el movimiento...
+				jmp _movimientos_generales	
+				
+			
+			_accioneslinea24:
+				cmp r9, '+'	
+				je _interseccionbloquefila1
+				
+				;si no es positivo el movimiento...
+				jmp _movimientos_generales	
+				
+				
+			_intersecciontabla:
+				;mov r14, [posX_tabla]
+				;cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota
+				;	
+				;	jae _anchotabla
+				;	
+				;	jmp _movimientos_generales
+				;	
+				;	_anchotabla:
+				;		add r14, 7
+				;		cmp r14, r10 ;Comparacion de las posiciones en X del final de la tabla vs la pelota
+				;		
+				;		jbe _final_intersecciontabla
+				;	
+				;		jmp _movimientos_generales
+				;		
+				;		_final_intersecciontabla:
+				
+							;??????????????????
+							cmp r9, '+'	
+							jne _nomal
+							jmp _movimientos_generales
+							
+							_nomal:
+							;???????????????????
+							mov  [posX_bola], r10	
+							mov [posY_bola], r11 	
+							call modificar_direccion
+							jmp _fin_modificar_posicion
+						
+				
+						
+			;Acciones para el choque con la fila 1 de bloques:
+			_interseccionbloquefila1:
+			cmp r10, 7
+				jae _seccion12
+				
+				mov r14, [bloque11]
+				cmp	 r14, 0
+				
+					je _bloque11falso
+					
+					mov r14, 25
+					mov [posY_bloque], r14
+					mov r14, 2
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque11], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque11falso:
+					jmp _movimientos_generales
+					
+			
+				_seccion12:
+				cmp r10, 17
+				jae _seccion13
+				
+				mov r14, [bloque12]
+				cmp	 r14, 0
+				
+					je _bloque12falso
+					
+					mov r14, 25
+					mov [posY_bloque], r14
+					mov r14, 10
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque12], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque12falso:
+					jmp _movimientos_generales
+					
+				
+				_seccion13:
+				cmp r10, 25
+				jae _seccion14
+				
+				mov r14, [bloque13]
+				cmp	 r14, 0
+				
+					je _bloque13falso
+					
+					mov r14, 25
+					mov [posY_bloque], r14
+					mov r14, 18 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque13], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque13falso:
+					jmp _movimientos_generales
+					
+					
+				_seccion14:
+				cmp r10, 33
+				jae _seccion15
+				
+				mov r14, [bloque14]
+				cmp	 r14, 0
+				
+					je _bloque14falso
+					
+					mov r14, 25
+					mov [posY_bloque], r14
+					mov r14, 26 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque14], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque14falso:
+					jmp _movimientos_generales
+					
+			
+				_seccion15:
+				cmp r10, 41
+				jae _seccion16
+				
+				mov r14, [bloque15]
+				cmp	 r14, 0
+				
+					je _bloque15falso
+					
+					mov r14, 25
+					mov [posY_bloque], r14
+					mov r14, 34 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque15], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque15falso:
+					jmp _movimientos_generales
+					
+					
+				_seccion16:
+				mov r14, [bloque16]
+				cmp	 r14, 0
+				
+					je _bloque16falso
+					
+					mov r14, 25
+					mov [posY_bloque], r14
+					mov r14, 42 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque16], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque16falso:
+					jmp _movimientos_generales
+					
+		
+			;Acciones para el choque con la fila 2 de bloques:
+			_interseccionbloquefila2:
+			cmp r10, 7
+				jae _seccion22
+				
+				mov r14, [bloque21]
+				cmp	 r14, 0
+				
+					je _bloque21falso
+					
+					mov r14, 26
+					mov [posY_bloque], r14
+					mov r14, 2
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque21], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque21falso:
+					jmp _movimientos_generales
+					
+			
+				_seccion22:
+				cmp r10, 17
+				jae _seccion23
+				
+				mov r14, [bloque22]
+				cmp	 r14, 0
+				
+					je _bloque22falso
+					
+					mov r14, 26
+					mov [posY_bloque], r14
+					mov r14, 10
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque22], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque22falso:
+					jmp _movimientos_generales
+					
+				
+				_seccion23:
+				cmp r10, 25
+				jae _seccion24
+				
+				mov r14, [bloque23]
+				cmp	 r14, 0
+				
+					je _bloque23falso
+					
+					mov r14, 26
+					mov [posY_bloque], r14
+					mov r14, 18 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque23], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque23falso:
+					jmp _movimientos_generales
+					
+					
+				_seccion24:
+				cmp r10, 33
+				jae _seccion25
+				
+				mov r14, [bloque24]
+				cmp	 r14, 0
+				
+					je _bloque24falso
+					
+					mov r14, 26
+					mov [posY_bloque], r14
+					mov r14, 26 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque24], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque24falso:
+					jmp _movimientos_generales
+					
+			
+				_seccion25:
+				cmp r10, 41
+				jae _seccion26
+				
+				mov r14, [bloque25]
+				cmp	 r14, 0
+				
+					je _bloque25falso
+					
+					mov r14, 26
+					mov [posY_bloque], r14
+					mov r14, 34 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque25], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque25falso:
+					jmp _movimientos_generales
+					
+					
+				_seccion26:
+				mov r14, [bloque26]
+				cmp	 r14, 0
+				
+					je _bloque26falso
+					
+					mov r14, 26
+					mov [posY_bloque], r14
+					mov r14, 42 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque26], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque26falso:
+					jmp _movimientos_generales
+					
+			
+			;Acciones para el choque con la fila 3 de bloques:
+			_interseccionbloquefila3:
+			cmp r10, 7
+				jae _seccion32
+				
+				mov r14, [bloque31]
+				cmp	 r14, 0
+				
+					je _bloque31falso
+					
+					mov r14, 27
+					mov [posY_bloque], r14
+					mov r14, 2
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque31], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque31falso:
+					jmp _movimientos_generales
+					
+			
+				_seccion32:
+				cmp r10, 17
+				jae _seccion33
+				
+				mov r14, [bloque32]
+				cmp	 r14, 0
+				
+					je _bloque32falso
+					
+					mov r14, 27
+					mov [posY_bloque], r14
+					mov r14, 10
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque32], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque32falso:
+					jmp _movimientos_generales
+					
+				
+				_seccion33:
+				cmp r10, 25
+				jae _seccion34
+				
+				mov r14, [bloque33]
+				cmp	 r14, 0
+				
+					je _bloque33falso
+					
+					mov r14, 27
+					mov [posY_bloque], r14
+					mov r14, 18 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque33], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque33falso:
+					jmp _movimientos_generales
+					
+					
+				_seccion34:
+				cmp r10, 33
+				jae _seccion35
+				
+				mov r14, [bloque34]
+				cmp	 r14, 0
+				
+					je _bloque34falso
+					
+					mov r14, 27
+					mov [posY_bloque], r14
+					mov r14, 26 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque34], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque34falso:
+					jmp _movimientos_generales
+					
+			
+				_seccion35:
+				cmp r10, 41
+				jae _seccion36
+				
+				mov r14, [bloque35]
+				cmp	 r14, 0
+				
+					je _bloque35falso
+					
+					mov r14, 27
+					mov [posY_bloque], r14
+					mov r14, 34 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque35], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque35falso:
+					jmp _movimientos_generales
+					
+					
+				_seccion36:
+				mov r14, [bloque36]
+				cmp	 r14, 0
+				
+					je _bloque36falso
+					
+					mov r14, 27
+					mov [posY_bloque], r14
+					mov r14, 42 
+					mov [posX_bloque], r14
+					mov r14, 0
+					mov [bloque36], r14
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
+					
+					_bloque36falso:
+					jmp _movimientos_generales
+								
+								
+	;MOVIMIENTOS HORIZONTALES
+	_movimientos_horizontales:
+	
+	cmp r12, 0
+		jne	_comparaciones2
+		
+		cmp r13, 0
+			je _fincargadatos1			
+
+			jmp _movimientos_verticales
+			
+			_fincargadatos1:
+			mov  [posX_bola], r10	
+			mov [posY_bola], r11 	
+			jmp _fin_modificar_posicion			
+		
+	_comparaciones2:
+	cmp r10, 1
+	je _accionescolumna1	
+	
+	cmp r10, 49
+	je _accionescolumna50
+	
+	_movimientos_generales_2:
+	cmp r8, '+'
+		je _agregar_horizontal
+													
+		dec r12	;Se decrementa en 1 la cantidad de elementos por sumar en X
+		dec r10 	;Se decrementa en 1 unidad la posicion en X de la pelota
+		jmp _movimientos_verticales	;Una vez decrementado, se salta a los movimientos horizontales
+											
+	_agregar_horizontal:
+		dec r12	;Se decrementa en 1 la cantidad de elementos por sumar en X
+		inc r10 	;Se incrementa en 1 unidad la posicion en X de la pelota
+		jmp _movimientos_verticales	;Una vez incrementado, se salta a los movimientos horizontales
+	
+					
+	_accionescolumna1:
+		cmp r8, '-'	
+		je _acciones1jmp	
+		
+		jmp _movimientos_generales_2
+		
+		_acciones1jmp:
+		mov  [posX_bola], r10	
+		mov [posY_bola], r11 	
+		call modificar_direccion
+		jmp _fin_modificar_posicion	
+		
+	_accionescolumna50:
+		cmp r8, '+'	
+		je _acciones2jmp	
+		
+		jmp _movimientos_generales_2
+		
+		_acciones2jmp:
+		mov  [posX_bola], r10	
+		mov [posY_bola], r11 	
+		call modificar_direccion
+		jmp _fin_modificar_posicion	
+		
+		
+		
+		
+		
+	;FIN DE LA FUNCION
+	_fin_modificar_posicion:
+	;mov  [posX_bola], r10	;Se carga la posicion X de la pelota en el registro general r10
+	;mov [posY_bola], r11 	;Se carga la posicion Y de la pelota en el registro general r11
+	ret
+;Final de la funcion
+	
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
 ;FIN DEL CODIGO FUENTE	
