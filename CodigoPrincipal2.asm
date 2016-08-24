@@ -60,6 +60,94 @@
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
 
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+;Macro que lee stdin_termios
+;Recibe 2: %1 (valor de stdin), %2 (valor de termios)
+%macro read_stdin_termios 2
+        push rax
+        push rbx
+        push rcx
+        push rdx
+
+        mov eax, 36h
+        mov ebx, %1
+        mov ecx, 5401h
+        mov edx, %2
+        int 80h
+
+        pop rdx
+        pop rcx
+        pop rbx
+        pop rax
+%endmacro
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+;Macro que escribe stdin_termios
+;Recibe 2 : %1 (valor de stdin), %2 (valor de termios)
+;-----------------------------------------------------------------------
+%macro write_stdin_termios 2
+        push rax
+        push rbx
+        push rcx
+        push rdx
+
+        mov eax, 36h
+        mov ebx, %1
+        mov ecx, 5402h
+        mov edx, %2
+        int 80h
+
+        pop rdx
+        pop rcx
+        pop rbx
+        pop rax
+%endmacro
+;End macro
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+;Macro apagar modo canonico del Kernel
+;parametros: %1 (valor de ICANON), %2 (valor de termios)
+%macro canonical_off 2
+	;Se llama a la funcion que lee el estado actual del TERMIOS en STDIN
+	;TERMIOS son los parametros de configuracion que usa Linux para STDIN
+        read_stdin_termios stdin,termios
+
+	;Se escribe el nuevo valor de ICANON en EAX, para apagar el modo canonico
+        push rax
+        mov eax, %1
+        not eax
+        and [%2 + 12], eax
+        pop rax
+
+	;Se escribe la nueva configuracion de TERMIOS
+        write_stdin_termios stdin,termios
+%endmacro
+;End Macro
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+        
+	
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+;Macro que enciende el modo canonico del Kernel
+;Parametros: %1 (valor de ICANON);	%2 (valor de termios)
+%macro canonical_on 2
+
+	;Se llama a la funcion que lee el estado actual del TERMIOS en STDIN
+	;TERMIOS son los parametros de configuracion que usa Linux para STDIN
+	read_stdin_termios stdin,termios
+
+        ;Se escribe el nuevo valor de modo Canonico
+        or dword [%2 + 12], %1
+
+	;Se escribe la nueva configuracion de TERMIOS
+        write_stdin_termios stdin,termios
+%endmacro
+;End macro
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
 
 
 ;////////////////////////////////////////////////////////////////////	Definicion de variables	////////////////////////////////////////////////////////////////////
@@ -156,7 +244,7 @@ section .data
 	posY_tabla: dq 3		;Las variables de posicion de la tabla y la pelota
 	posY_bola: dq 4
 	posY_bloque: dq 0
-	posX_tabla: dq 22
+	posX_tabla: dq 22	
 	posX_bola: dq 25
 	posX_bloque: dq 0
 	
@@ -166,11 +254,12 @@ section .data
 	dir_mov_X: db '+'		;Las variablesde direccion de movimiento de la pelota
 	dir_mov_Y: db '+'
 	
+	temporal2: db '-'
 	
 ;segmento de datos no-inicializados, que se pueden usar para capturar variables 
 ;del usuario, por ejemplo: desde el teclado
 section .bss
-	temporal: resb 1
+	temporal: resq 1
 	userName: resb 20
 	
 ;-------------------------------------------------------------------------------------------------------------------------------------
@@ -190,8 +279,9 @@ _start:
 	;Imprime primera pantalla de bienvenida
 
 	;Se enciende el modo canonico
-	call canonical_on 
-	call echo_on
+	;call canonical_on 
+	canonical_on ICANON,termios
+	;call echo_on
 	
 	;Se imprime la pantalla inicial
 	impr_texto saludo,saludo_length
@@ -203,7 +293,8 @@ _start:
 	leer_texto userName,20
 	
 	;Apagar el modo canonico
-	call canonical_off
+	;call canonical_off
+	canonical_off ICANON,termios
 	call echo_off
 
 	;Limpiar la pantalla
@@ -214,9 +305,9 @@ _start:
 
 	;Esperar a leer la tecla X para ingresar al juego
 	_leer_press_x:
-	leer_texto temporal,1	
-	mov al, [temporal]
-	cmp al, 'x'
+	leer_texto temporal2,1	
+	mov r15, [temporal2]
+	cmp r15, 'x'
 	jne _leer_press_x
 	
 	;Se limpia la pantalla y se imprime la pantalla de juego.
@@ -227,7 +318,7 @@ _start:
 	call cursor_inicial
 	
 	;Se llama a la funcion para dibujar la tabla y la pelota 
-	call imprime_tabla_pelota
+	;call imprime_tabla_pelota
 	
 	
 	;Se reinician los valores de posicion 
@@ -242,7 +333,48 @@ _start:
 	
 	
 	
+	;///////////////////////////////////////////////////
+	;EXCLUSIVAMENTE PARA PRUEBAS
 	
+	mov r14, 0
+	
+	_loopdeprueba:
+
+	call imprime_tabla_pelota	
+	
+	leer_texto temporal2,1	
+	mov r15, [temporal2]
+	
+	cmp r15, 'x'
+	je _final_ejecucion
+	
+	cmp r15, 'z'
+	je _mov_izquierda	
+	
+	cmp r15, 'c'
+	je _mov_derecha
+	
+	call borra_tabla_pelota
+	mov [temporal2], r14
+	jmp _loopdeprueba	
+	
+	_mov_izquierda:
+	call borra_tabla_pelota
+	call tabla_izquierda	
+	mov [temporal2], r14	
+	jmp _loopdeprueba		
+	
+	_mov_derecha:
+	call borra_tabla_pelota
+	call tabla_derecha	
+	mov [temporal2], r14
+	jmp _loopdeprueba	
+	
+	
+	_final_ejecucion:
+	limpiar_pantalla clean,clean_tam
+	;EXCLUSIVAMENTE PARA PRUEBAS
+	;///////////////////////////////////////////////////
 	
 	
 	
@@ -764,7 +896,7 @@ ret
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
-;Funcion que modifica la direccion de la pelota cuando 
+;Funcion que modifica la direccion de la pelota cuando la funcion modifica posicion lo requiera
 modificar_direccion:
 	mov r8, [posX_bola]			;Se carga la posicion X de la bola 
 	
@@ -841,6 +973,49 @@ modificar_direccion:
 
 ret
 ;Fin de la funcion
+
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que mueve una posicion a la derecha el valor horizontal de la tabla, para que se desplace
+tabla_derecha:
+	
+	mov r8, [posX_tabla]	;Se carga la posicion en r8
+	
+	cmp r8, 42			;Se compara la posicion de r8 con la posicion maxima a la derecha que puede tener la tabla 
+						;para no exceder los limites del area de juego
+	
+	je _final_tabla_derecha	;Si la posicion ha llegado al limite derecho, no se agrega nada y se salta directamente al final de la funcion
+	
+	inc r8				;Si no se ha llegado al limite derecho, entonces se incrementa una unidad a la posicion
+	mov [posX_tabla], r8	;Se guarda en memoria la nueva posicion horizontal
+	
+		
+	_final_tabla_derecha:	;Fin de la funcion
+	ret
+;Final de la Funcion
+
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que mueve una posicion a la izquierda el valor horizontal de la tabla, para que se desplace
+tabla_izquierda:
+	
+	mov r8, [posX_tabla]	;Se carga la posicion en r8
+	
+	cmp r8, 1			;Se compara la posicion de r8 con la posicion maxima a la izquierda que puede tener la tabla 
+						;para no exceder los limites del area de juego
+	
+	je _final_tabla_izquierda	;Si la posicion ha llegado al limite iaquierdo, no se agrega nada y se salta directamente al final de la funcion
+	
+	dec r8				;Si no se ha llegado al limite izquierdo, entonces se decrementa una unidad a la posicion
+	mov [posX_tabla], r8	;Se guarda en memoria la nueva posicion horizontal
+	
+		
+	_final_tabla_izquierda:	;Fin de la funcion
+	ret
+;Final de la Funcion
+
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
