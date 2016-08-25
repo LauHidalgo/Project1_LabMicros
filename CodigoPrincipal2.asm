@@ -97,6 +97,7 @@ section .data
 	numero1: db '1'		;Variables char que sirven para escribir los numeros 1 al 3
 	numero2: db '2'
 	numero3: db '3'
+	numero3: db '0'
 	
 	;Mensajes para pantalla de bienvenida
 	saludo: db 0xa,'Bienvenido a Micronoid', 0xa 								;Mensaje de bienvenida al juego
@@ -745,7 +746,13 @@ usuarioyvidas:
 	jmp _finusuarioyvidas
 	
 	_jump2:
+	cmp r8, 1
+	jne _jump3
 	impr_texto numero1, 1
+	jmp _finusuarioyvidas
+	
+	_jump3:
+	impr_texto numero0, 1
 	
 	_finusuarioyvidas:
 	impr_texto nueva_linea, nueva_linea_length
