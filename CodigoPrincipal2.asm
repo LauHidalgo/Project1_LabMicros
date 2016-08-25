@@ -13,9 +13,6 @@
 ;
 ;#######################################################
 
-
-
-
 ;////////////////////////////////////////////////////////////////////	Declaracion de Macros 	////////////////////////////////////////////////////////////////////
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
@@ -56,98 +53,6 @@
 	mov rdx,%2	;segundo parametro: Tamano 
 	syscall
 %endmacro
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-;Macro que lee stdin_termios
-;Recibe 2: %1 (valor de stdin), %2 (valor de termios)
-%macro read_stdin_termios 2
-        push rax
-        push rbx
-        push rcx
-        push rdx
-
-        mov eax, 36h
-        mov ebx, %1
-        mov ecx, 5401h
-        mov edx, %2
-        int 80h
-
-        pop rdx
-        pop rcx
-        pop rbx
-        pop rax
-%endmacro
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-;Macro que escribe stdin_termios
-;Recibe 2 : %1 (valor de stdin), %2 (valor de termios)
-;-----------------------------------------------------------------------
-%macro write_stdin_termios 2
-        push rax
-        push rbx
-        push rcx
-        push rdx
-
-        mov eax, 36h
-        mov ebx, %1
-        mov ecx, 5402h
-        mov edx, %2
-        int 80h
-
-        pop rdx
-        pop rcx
-        pop rbx
-        pop rax
-%endmacro
-;End macro
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-;Macro apagar modo canonico del Kernel
-;parametros: %1 (valor de ICANON), %2 (valor de termios)
-%macro canonical_off 2
-	;Se llama a la funcion que lee el estado actual del TERMIOS en STDIN
-	;TERMIOS son los parametros de configuracion que usa Linux para STDIN
-        read_stdin_termios stdin,termios
-
-	;Se escribe el nuevo valor de ICANON en EAX, para apagar el modo canonico
-        push rax
-        mov eax, %1
-        not eax
-        and [%2 + 12], eax
-        pop rax
-
-	;Se escribe la nueva configuracion de TERMIOS
-        write_stdin_termios stdin,termios
-%endmacro
-;End Macro
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        
-	
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-;Macro que enciende el modo canonico del Kernel
-;Parametros: %1 (valor de ICANON);	%2 (valor de termios)
-%macro canonical_on 2
-
-	;Se llama a la funcion que lee el estado actual del TERMIOS en STDIN
-	;TERMIOS son los parametros de configuracion que usa Linux para STDIN
-	read_stdin_termios stdin,termios
-
-        ;Se escribe el nuevo valor de modo Canonico
-        or dword [%2 + 12], %1
-
-	;Se escribe la nueva configuracion de TERMIOS
-        write_stdin_termios stdin,termios
-%endmacro
-;End macro
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
 
 
 
@@ -204,17 +109,26 @@ section .data
 	msjUser: db 0xa, 'Ingrese el nombre del jugador y luego presione Enter: ' 		;Banner para ingreso de nombre de usuario.
 	msjUser_length: equ $-msjUser 					
 	
-	despedida: db 0xa,0xa, 'Gracias por jugar micronoid',0xa,0xa		;Banner de despedida 
-	despedida_length: equ $-despedida 				
+	grupo: 	db 'Grupo: 3', 0xa
+	grupo_length: equ $-grupo
 	
-	grupo: db
-	anthony: db 'Anthony Chaves Vasquez - 201048654'
+	anthony: 	db 'Anthony Chaves Vasquez - 201048654', 0xa
+	anthony_length: equ $-anthony
 	
-	;Manejo del modo canonico y el echo
-	termios:	times 36 db 0	;Estructura de 36bytes que contiene el modo de operacion de la consola
-	stdin:		equ 0		;Standard Input (se usa stdin en lugar de escribir manualmente los valores)
-	ICANON:		equ 1<<1	;ICANON: Valor de control para encender/apagar el modo canonico
-	ECHO:           equ 1<<3	;ECHO: Valor de control para encender/apagar el modo de eco
+	carlos:	db 'Carlos Murillo Soto - 20338697', 0xa
+	carlos_length: equ $-carlos
+	
+	irene:	db 'Irene Rivera Arrieta - 201121803', 0xa
+	irene_length: equ $-irene
+	
+	laura:	db 'Laura Hidalgo Soto - 200956890', 0xa
+	laura_length: equ $-laura
+	
+	msj_final: db 'Gracias por jugar Micronoid', 0xa
+	msj_final_length: equ $-msj_final
+	
+	prompt: db 'Presione Enter para continuar...', 0xa
+	prompt_length: equ $-prompt
 	
 	intentos: dq 3			;Variable que indica el numero de intentos que el usuario tiene en el juego
 	
@@ -264,10 +178,27 @@ section .data
 	
 	teclado: dq '-'
 	
+	;Manejo del modo canonico y el echo	
+	ICANON:		equ	2      	;Para la bandera canonical
+	ECHO:		equ 1<<3      	;Para la bandera de echo
+	VTIME:		equ	4       	;Posición de VTIME en CC_C
+	VMIN:		equ	5       	;Posición de VMIN en CC_C
+	CC_C:		equ	18      	;Offset para localizar CC_C
+	STDIN:		equ	0
+	STDOUT:		equ	1
+	TCGETA: 		equ	0x5401
+	TCSETA: 		equ	0x5402
+	SYS_READ:	equ	0
+	SYS_WRITE:	equ	1
+	SYS_EXIT:		equ	0x3c
+	IOCTL:		equ	16
+	
 ;segmento de datos no-inicializados, que se pueden usar para capturar variables 
 ;del usuario, por ejemplo: desde el teclado
 section .bss
 	userName: resb 20
+	termios:    resb    46
+	familia:	resb 48
 	
 ;-------------------------------------------------------------------------------------------------------------------------------------
 
@@ -286,7 +217,7 @@ _start:
 	;Imprime primera pantalla de bienvenida
 
 	;Se enciende el modo canonico
-	canonical_on ICANON,termios
+	call canonical_on 
 		
 	;Se imprime la pantalla inicial
 	impr_texto saludo,saludo_length
@@ -298,7 +229,7 @@ _start:
 	leer_texto userName,20
 	
 	;Apagar el modo canonico
-	canonical_off ICANON,termios
+	call canonical_off 
 	call echo_off
 
 	;Limpiar la pantalla
@@ -319,9 +250,7 @@ _start:
 	call imprimirpantalla_normal
 	
 	;Se coloca el cursor en la posicion de inicio
-	call cursor_inicial
-	
-		
+	call cursor_inicial		
 	
 	;Se reinician los valores de posicion 
 	call reestablecer_valores
@@ -331,26 +260,21 @@ _start:
 	;///////////////////////////////////////////////////
 	;///////////////////////////////////////////////////
 	;///////////////////////////////////////////////////
-	;EXCLUSIVAMENTE PARA PRUEBAS
+	;EXCLUSIVAMENTE PARA PRUEBAS	
 	
-	canonical_off ICANON,termios
-	call vtime
-	call vmin 
-	
-	mov r14, 1
-	mov [deltaY], r14
-	mov r14, 5
-	mov [deltaX], r14
-	
+	mov r8, 2
+	mov [deltaX], r8
+	mov r8, 1
+	mov [deltaY], r8
 	
 	_loopdeprueba:
-
+	
 	call imprime_tabla_pelota	
 	
 	leer_texto teclado,1	
 	mov r15, [teclado]
 	
-	cmp r15, 'p'
+	cmp r15, 'q'
 	je _final_ejecucion
 	
 	cmp r15, 'z'
@@ -374,8 +298,6 @@ _start:
 	
 	_siguiente:
 	
-	call borra_tabla_pelota
-	
 	call modificar_posicion
 	
 	mov r8, posX_bloque
@@ -386,11 +308,14 @@ _start:
 	cmp r8, 0
 	mov [posX_bloque], r8 
 	mov [posY_bloque], r8 
+	mov [teclado], r8 
 	jmp _loopdeprueba
 	
 	
 	_final_ejecucion:
 	limpiar_pantalla clean,clean_tam
+	
+	call pantalla_final
 	;EXCLUSIVAMENTE PARA PRUEBAS
 	;///////////////////////////////////////////////////
 	;///////////////////////////////////////////////////
@@ -419,6 +344,92 @@ _start:
 
 
 ;////////////////////////////////////////////////////////////////////	Declaracion de CALL's (metodos o funciones) luego del codigo principal	////////////////////////////////////////////////////////////////////
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que apaga el modo canonico (que no necesita del enter para ingresar una tecla)
+;Se agrega ademas el modo vtime que -junto con el vmin- espera un tiempo prudencial para que el usuario ingrese una tecla
+canonical_off:
+    call read_stdin_termios
+    ; Limpiamos la bandera de ICANON
+    push rax
+    mov rax, ICANON
+    not rax
+    and [termios+12], rax
+    mov byte[termios+CC_C+VTIME], 3     ; Ponemos el tiempo de espera a 0
+    mov byte[termios+CC_C+VMIN], 0      ; Ponemos la cantidad mínima a 0
+    pop rax
+    call write_stdin_termios
+    ret
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que apaga el modo echo, es decir, las teclas ingresadas no aparecen en la pantalla
+echo_off:
+    call read_stdin_termios
+    ; Limpiamos la bandera de ECHO
+    ;push rax
+    mov rax, ECHO
+    not rax
+    and [termios+12], rax
+    ;pop rax
+    call write_stdin_termios
+    ret
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que enciende el modo canonico
+canonical_on:
+    call read_stdin_termios
+    ; Restauramos la bandera de CANONICAL
+    or dword [termios+12], ICANON
+    mov byte[termios+CC_C+VTIME], 0     ; Tiempo espera = 0
+    mov byte[termios+CC_C+VMIN], 1      ; Bytes mínimos = 1(default)
+    call write_stdin_termios
+    ret
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que enciende el modo echo
+echo_on:
+    call read_stdin_termios
+    ; Restauramos la bandera de ECHO
+    or dword [termios+12], ECHO
+    call write_stdin_termios
+    ret
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que carga el estatus de ingreso del sistema
+read_stdin_termios:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    mov rax, IOCTL
+    mov rdi, STDIN
+    mov rsi, TCGETA
+    mov rdx, termios
+    syscall
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que sobreescribe la configuracion del ingreso de los perifericos al sistema
+write_stdin_termios:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    mov rax, IOCTL
+    mov rdi, STDIN
+    mov rsi, TCSETA
+    mov rdx, termios
+    syscall
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret
+
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
 ;Funcion que imprime el area de juego con el mensaje de espera
@@ -519,101 +530,6 @@ usuarioyvidas:
 	impr_texto nueva_linea, nueva_linea_length
 	ret
 ;Final de la funcion	
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Habilitacion del modo ECHO. Linux muestra en la pantalla(stdout) cada tecla que se 
-;escribe en el teclado (stdin)
-echo_on:
-	call read_stdin_termios 			;Lee el estado actual del TERMIOS en STDIN
-	or dword [termios+12], ECHO 		;Escribe nuevo valor de modo echo
-	call write_stdin_termios 			;Escribe nueva configuracion de TERMIOS
-	ret
-;Final de la Funcion
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Deshabilitacion del modo ECHO. 
-echo_off:
-	call read_stdin_termios 		;Lee el estado actual del TERMIOS en STDIN
-	mov rax, ECHO			;Se mueve la direccion de memoria ECHO a rax
-	not rax					;Se invierte rax
-	and [termios+12], rax 		;Escribe nuevo valor de modo echo
-	call write_stdin_termios 		;Escribe nueva configuracion de TERMIOS
-	ret
-;Final de la Funcion
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Se apaga el modo canonico de Linux. 
-vtime:
-	call read_stdin_termios  	;Funcion que lee estado actual de TERMIOS en STDIN
-	mov rax, ICANON		;Carga el valor de ICANON al registro RAX
-	not rax				;Invierte el valor de los bits de RAX
-	and [termios+22], rax 	;Escribe nuevo valor del modo canonico
-	call write_stdin_termios	;Escribe nueva configuracion de TERMIOS
-	ret
-;Final de la Funcion
-
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Se apaga el modo canonico de Linux. 
-vmin:
-	call read_stdin_termios  	;Funcion que lee estado actual de TERMIOS en STDIN
-	mov rax, ICANON		;Carga el valor de ICANON al registro RAX
-	not rax				;Invierte el valor de los bits de RAX
-	and [termios+23], rax 	;Escribe nuevo valor del modo canonico
-	call write_stdin_termios	;Escribe nueva configuracion de TERMIOS
-	ret
-;Final de la Funcion
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Lectura de la configuracion actual del stdin o teclado
-;Valores de stdin se cargan con EAX=36h y llamada a la interrupcion 80h
-;Para utilizarlo: call read_stdin_termios
-read_stdin_termios:
-	push rax
-	push rbx
-	push rcx
-	push rdx
-
-	mov eax, 36h
-	mov ebx, stdin
-	mov ecx, 5401h
-	mov edx, termios
-	int 80h
-
-	pop rdx
-	pop rcx
-	pop rbx
-	pop rax
-	ret
-;Final de la Funcion
-
-
-;-------------------------------------------------------------------------------------------------------------------------------------
-;Escritura de la configuracion actual del stdin o teclado
-;Para utilizarlo: call write_stdin_termios
-write_stdin_termios:
-	push rax
-	push rbx
-	push rcx
-	push rdx
-
-	mov eax, 36h
-	mov ebx, stdin
-	mov ecx, 5402h
-	mov edx, termios
-	int 80h
-
-	pop rdx
-	pop rcx
-	pop rbx
-	pop rax
-	ret
-;Final de la Funcion
 
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
@@ -1140,14 +1056,18 @@ modificar_posicion:
 													
 			_accioneslinea28:
 				cmp r9, '+'	
+				je _mod_direccion_28
+				
+				jmp _interseccionbloquefila3	
+				
+				_mod_direccion_28:				
+				
 				mov  [posX_bola], r10	
 				mov [posY_bola], r11 	
 				call modificar_direccion
 				je _fin_modificar_posicion	
 				
-				;si no es positivo el movimiento...
-				jmp _interseccionbloquefila3	
-				
+								
 
 			_accioneslinea27:
 				cmp r9, '+'	
@@ -1715,7 +1635,65 @@ modificar_posicion:
 ;Funcion que imprime la pantalla de salida del juego
 pantalla_final:
 
+	call canonical_on
+
 	limpiar_pantalla clean,clean_tam
+	
+	impr_texto nueva_linea,nueva_linea_length
+	impr_texto nueva_linea,nueva_linea_length
+	impr_texto nueva_linea,nueva_linea_length
+	
+	impr_texto msj_final,msj_final_length
+	
+	impr_texto nueva_linea,nueva_linea_length
+	
+	impr_texto grupo,grupo_length
+	impr_texto laura,laura_length
+	impr_texto irene,irene_length
+	impr_texto carlos,carlos_length
+	impr_texto anthony,anthony_length
+	
+	impr_texto nueva_linea,nueva_linea_length
+	
+	mov eax,80000002h
+	cpuid
+	mov [familia], eax
+	mov [familia+4], ebx
+	mov [familia+8], ecx
+	mov [familia+12], edx
+	
+	mov eax,80000003h
+	cpuid
+	mov [familia+16], eax
+	mov [familia+20], ebx
+	mov [familia+24], ecx
+	mov [familia+28], edx
+	
+	mov eax,80000004h
+	cpuid
+	mov [familia+32], eax
+	mov [familia+36], ebx
+	mov [familia+40], ecx
+	mov [familia+44], edx
+	
+	impr_texto familia, 48
+	
+	impr_texto nueva_linea,nueva_linea_length
+	impr_texto nueva_linea,nueva_linea_length
+	impr_texto nueva_linea,nueva_linea_length
+	
+	
+	impr_texto prompt,prompt_length
+	
+	_leer_press_enter:
+	leer_texto teclado,1	
+	mov r15, [teclado]
+	cmp r15, 0xa
+	jne _leer_press_x
+
+	limpiar_pantalla clean,clean_tam
+	
+	ret
 	
 
 	
