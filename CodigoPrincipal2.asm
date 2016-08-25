@@ -79,6 +79,7 @@ section .data
 	msj_press_enter:			db '|        > Presione enter para continuar<         |', 0xa
 	msj_vida_menos:		db '|              > Ha perdido una vida <            |', 0xa
 	msj_game_over:		db '|> Fin del juego...  Mejor suerte para la proxima<|', 0xa	
+	msj_gana:		db '|          >FELICIDADES! Juego terminado<         |', 0xa	
 	
 	;Lineas anteriores son del mismo tamano, entonces se maneja como una constante
 	tamano_linea: 		equ 52
@@ -138,6 +139,8 @@ section .data
 	derecha: db 0x1b, "[1C" 			;Codigo ANSI para mover el cursor 1 posicion hacia la derecha
 	izquierda: db 0x1b, "[1D" 			;Codigo ANSI para mover el cursor 1 posicion hacia la izquierda	
 	cursor_tamano: equ $-izquierda	
+	
+	
 	
 		
 	;Variables para limpiar pantalla
@@ -318,17 +321,175 @@ _start:
 			mov r15, [intentos]
 			dec	r15
 			mov [intentos], r15
-			call imprimir_pierdevida
-			
-			_microloop1:
-			leer_texto teclado,1	
-			mov r15, [teclado]
-			cmp r15, 0xa			;la tecla q fue seleccionada para que finalice el juego abruptamente
+			call imprimir_pierdevida			
 			je _loopdeproceso
 		
 		;Se compara si la cantidad de intentos es igual a cero
+		_nohacaido:
+		mov r15, [intentos]
+		cmp r15, 0
+			jne _nohaterminado		
+			
+			call imprimir_pierdejuego			
+			je _final_ejecucion
+			
+		;Se compara ahora si todos los bloques han sido eliminados
+		_nohaterminado:
+		mov r8, 0	;inicializacion del registro contador
+		
+		mov r15, [bloque11]
+		cmp r15, 0
+			jne _irabloque12
+			
+			inc r8
+			jmp _irabloque12
+		
+		_irabloque12:
+		mov r15, [bloque12]
+		cmp r15, 0
+			jne _irabloque13
+			
+			inc r8
+			jmp _irabloque13
+		
+		_irabloque13:
+		mov r15, [bloque13]
+		cmp r15, 0
+			jne _irabloque14
+			
+			inc r8
+			jmp _irabloque14
+		
+		_irabloque14:
+		mov r15, [bloque14]
+		cmp r15, 0
+			jne _irabloque15
+			
+			inc r8
+			jmp _irabloque15
+		
+		_irabloque15:
+		mov r15, [bloque15]
+		cmp r15, 0
+			jne _irabloque16
+			
+			inc r8
+			jmp _irabloque16
+		
+		_irabloque16:
+		mov r15, [bloque16]
+		cmp r15, 0
+			jne _irabloque21
+			
+			inc r8
+			jmp _irabloque21
+		
+		_irabloque21:
+		mov r15, [bloque21]
+		cmp r15, 0
+			jne _irabloque22
+			
+			inc r8
+			jmp _irabloque22
+		
+		_irabloque22:
+		mov r15, [bloque22]
+		cmp r15, 0
+			jne _irabloque23
+			
+			inc r8
+			jmp _irabloque23
+		
+		_irabloque23:
+		mov r15, [bloque23]
+		cmp r15, 0
+			jne _irabloque24
+			
+			inc r8
+			jmp _irabloque24
+		
+		_irabloque24:
+		mov r15, [bloque24]
+		cmp r15, 0
+			jne _irabloque25
+			
+			inc r8
+			jmp _irabloque25
+		
+		_irabloque25:
+		mov r15, [bloque25]
+		cmp r15, 0
+			jne _irabloque26
+			
+			inc r8
+			jmp _irabloque26
+		
+		_irabloque26:
+		mov r15, [bloque26]
+		cmp r15, 0
+			jne _irabloque31
+			
+			inc r8
+			jmp _irabloque31
+			
+		_irabloque31:
+		mov r15, [bloque31]
+		cmp r15, 0
+			jne _irabloque32
+			
+			inc r8
+			jmp _irabloque32
+		
+		_irabloque32:
+		mov r15, [bloque32]
+		cmp r15, 0
+			jne _irabloque33
+			
+			inc r8
+			jmp _irabloque33
+		
+		_irabloque33:
+		mov r15, [bloque33]
+		cmp r15, 0
+			jne _irabloque34
+			
+			inc r8
+			jmp _irabloque34
+		
+		_irabloque34:
+		mov r15, [bloque34]
+		cmp r15, 0
+			jne _irabloque35
+			
+			inc r8
+			jmp _irabloque35
+		
+		_irabloque35:
+		mov r15, [bloque35]
+		cmp r15, 0
+			jne _irabloque36
+			
+			inc r8
+			jmp _irabloque36
+		
+		_irabloque36:
+		mov r15, [bloque36]
+		cmp r15, 0
+			jne _compararganador
+			
+			inc r8
+			jmp _compararganador
+			
+		_compararganador:
+		cmp r8, 18
+			jne _continuar
+			
+			call imprimir_ganajuego
+			jmp _final_ejecucion
+		
 		
 		;Se recibe la tecla presionada desde el teclado, y se mueve a la variable temporal teclado
+		_continuar:
 		leer_texto teclado,1	
 		mov r15, [teclado]
 		
@@ -382,9 +543,7 @@ _start:
 	;///////////////////////////////////////////////////
 	;///////////////////////////////////////////////////
 	;///////////////////////////////////////////////////
-	
-	
-	
+		
 	
 	
 	
@@ -1781,7 +1940,152 @@ pantalla_final:
 	limpiar_pantalla clean,clean_tam
 	
 	ret
+;final de la funcion
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que imprime en el area de juego la perdida de una vida
+imprimir_pierdevida:
+
+	;movimientos del cursor
+	;----------------------------------
+	mov r8, 0				;Se inicializa el registro contador r8	
+	_vuelta:
+	cmp r8, 16
+		jne _movimientoarriba
+		
+		jmp _imprimir_pierdeintento		
+		
+		_movimientoarriba:		
+		impr_texto arriba, cursor_tamano
+		inc r8
+		jmp _vuelta
+		
+	_imprimir_pierdeintento:
+		impr_texto msj_vida_menos, tamano_linea
+		impr_texto msj_press_enter, tamano_linea
 	
+	mov r8, 0
+	_vuelta2:
+	cmp r8, 15
+		jne _movimientoabajo
+		
+		jmp _final_imprimir_pierdevida	
+		
+		_movimientoabajo:		
+		impr_texto abajo, cursor_tamano
+		inc r8
+		jmp _vuelta2
+	
+	
+	_final_imprimir_pierdevida:
+	
+	_leer_press_enter_2:
+	leer_texto teclado,1	
+	mov r15, [teclado]
+	cmp r15, 0xa
+	jne _leer_press_enter_2
+
+	ret
+	
+;Fin de la funcion
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que imprime en el area de juego la perdida del juego
+imprimir_pierdejuego:
+
+	;movimientos del cursor
+	;----------------------------------
+	mov r8, 0				;Se inicializa el registro contador r8	
+	_vuelta3:
+	cmp r8, 16
+		jne _movimientoarriba2
+		
+		jmp _imprimir_pierdearkanoid	
+		
+		_movimientoarriba2:		
+		impr_texto arriba, cursor_tamano
+		inc r8
+		jmp _vuelta3
+		
+	_imprimir_pierdearkanoid:
+		impr_texto msj_game_over, tamano_linea
+		impr_texto msj_press_enter, tamano_linea
+	
+	mov r8, 0
+	_vuelta4:
+	cmp r8, 15
+		jne _movimientoabajo2
+		
+		jmp _final_imprimir_pierdejuego
+		
+		_movimientoabajo2:		
+		impr_texto abajo, cursor_tamano
+		inc r8
+		jmp _vuelta4
+	
+	
+	_final_imprimir_pierdejuego:
+	
+	_leer_press_enter_3:
+	leer_texto teclado,1	
+	mov r15, [teclado]
+	cmp r15, 0xa
+	jne _leer_press_enter_3
+
+	
+	ret	
+;Fin de la funcion
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que imprime en el area de juego la perdida del juego
+imprimir_ganajuego:
+
+	;movimientos del cursor
+	;----------------------------------
+	mov r8, 0				;Se inicializa el registro contador r8	
+	_vuelta5:
+	cmp r8, 16
+		jne _movimientoarriba3
+		
+		jmp _imprimir_ganaarkanoid	
+		
+		_movimientoarriba3:		
+		impr_texto arriba, cursor_tamano
+		inc r8
+		jmp _vuelta5
+		
+	_imprimir_ganaarkanoid:
+		impr_texto msj_gana, tamano_linea
+		impr_texto msj_press_enter, tamano_linea
+	
+	mov r8, 0
+	_vuelta6:
+	cmp r8, 15
+		jne _movimientoabajo3
+		
+		jmp _final_imprimir_ganajuego
+		
+		_movimientoabajo3:		
+		impr_texto abajo, cursor_tamano
+		inc r8
+		jmp _vuelta6
+	
+	
+	_final_imprimir_ganajuego:
+	
+	_leer_press_enter_4:
+	leer_texto teclado,1	
+	mov r15, [teclado]
+	cmp r15, 0xa
+	jne _leer_press_enter_4
+	
+	
+	ret	
+;Fin de la funcion
+
 
 	
 
