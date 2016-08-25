@@ -150,6 +150,8 @@
 
 
 
+
+
 ;////////////////////////////////////////////////////////////////////	Definicion de variables	////////////////////////////////////////////////////////////////////
 
 section .data
@@ -201,10 +203,12 @@ section .data
 
 	msjUser: db 0xa, 'Ingrese el nombre del jugador y luego presione Enter: ' 		;Banner para ingreso de nombre de usuario.
 	msjUser_length: equ $-msjUser 					
-		
-	;Variables para limpiar pantalla
-	clean    db 0x1b, "[2J", 0x1b, "[H"
-	clean_tam equ $ - clean
+	
+	despedida: db 0xa,0xa, 'Gracias por jugar micronoid',0xa,0xa		;Banner de despedida 
+	despedida_length: equ $-despedida 				
+	
+	grupo: db
+	anthony: db 'Anthony Chaves Vasquez - 201048654'
 	
 	;Manejo del modo canonico y el echo
 	termios:	times 36 db 0	;Estructura de 36bytes que contiene el modo de operacion de la consola
@@ -217,9 +221,13 @@ section .data
 	arriba: db 0x1b, "[1A" 			;Codigo ANSI para mover el cursor 1 posicion hacia arriba
 	abajo: db 0x1b, "[1B" 			;Codigo ANSI para mover el cursor 1 posicion hacia abajo
 	derecha: db 0x1b, "[1C" 			;Codigo ANSI para mover el cursor 1 posicion hacia la derecha
-	izquierda: db 0x1b, "[1D" 			;Codigo ANSI para mover el cursor 1 posicion hacia la izquierda
+	izquierda: db 0x1b, "[1D" 			;Codigo ANSI para mover el cursor 1 posicion hacia la izquierda	
 	cursor_tamano: equ $-izquierda	
 	
+		
+	;Variables para limpiar pantalla
+	clean    db 0x1b, "[2J", 0x1b, "[H"
+	clean_tam equ $ - clean
 
 	bloque11: dq 1		;Las variabes bloque sirven para tener control de cuales bloques ya han sido eliminados
 	bloque12: dq 1
@@ -324,6 +332,10 @@ _start:
 	;///////////////////////////////////////////////////
 	;///////////////////////////////////////////////////
 	;EXCLUSIVAMENTE PARA PRUEBAS
+	
+	canonical_off ICANON,termios
+	call vtime
+	call vmin 
 	
 	mov r14, 1
 	mov [deltaY], r14
@@ -528,6 +540,31 @@ echo_off:
 	not rax					;Se invierte rax
 	and [termios+12], rax 		;Escribe nuevo valor de modo echo
 	call write_stdin_termios 		;Escribe nueva configuracion de TERMIOS
+	ret
+;Final de la Funcion
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Se apaga el modo canonico de Linux. 
+vtime:
+	call read_stdin_termios  	;Funcion que lee estado actual de TERMIOS en STDIN
+	mov rax, ICANON		;Carga el valor de ICANON al registro RAX
+	not rax				;Invierte el valor de los bits de RAX
+	and [termios+22], rax 	;Escribe nuevo valor del modo canonico
+	call write_stdin_termios	;Escribe nueva configuracion de TERMIOS
+	ret
+;Final de la Funcion
+
+
+
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Se apaga el modo canonico de Linux. 
+vmin:
+	call read_stdin_termios  	;Funcion que lee estado actual de TERMIOS en STDIN
+	mov rax, ICANON		;Carga el valor de ICANON al registro RAX
+	not rax				;Invierte el valor de los bits de RAX
+	and [termios+23], rax 	;Escribe nuevo valor del modo canonico
+	call write_stdin_termios	;Escribe nueva configuracion de TERMIOS
 	ret
 ;Final de la Funcion
 
@@ -1673,6 +1710,14 @@ modificar_posicion:
 	;mov [posY_bola], r11 	;Se carga la posicion Y de la pelota en el registro general r11
 	ret
 ;Final de la funcion
+	
+;-------------------------------------------------------------------------------------------------------------------------------------
+;Funcion que imprime la pantalla de salida del juego
+pantalla_final:
+
+	limpiar_pantalla clean,clean_tam
+	
+
 	
 
 ;-------------------------------------------------------------------------------------------------------------------------------------
