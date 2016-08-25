@@ -257,60 +257,100 @@ _start:
 	
 	
 	
-	;///////////////////////////////////////////////////
-	;///////////////////////////////////////////////////
-	;///////////////////////////////////////////////////
-	;EXCLUSIVAMENTE PARA PRUEBAS	
+	;Se cargan los movimientos de pelota y la direccion horizontal, segun el numero de intento
+	mov r9, [intentos]
 	
-	mov r8, 2
-	mov [deltaX], r8
-	mov r8, 1
-	mov [deltaY], r8
+	cmp r9, 3
+	je _primerintento
 	
-	_loopdeprueba:
+	cmp r9, 2
+	je _segundointento
 	
-	call imprime_tabla_pelota	
+		mov r8, 2
+		mov [deltaX], r8
+		mov r8, 1
+		mov [deltaY], r8
+		mov r8, '+'
+		mov [dir_mov_X], r8
+		jmp _loopdejuego
+		
+	_primerintento:
+		
+		mov r8, 1
+		mov [deltaX], r8
+		mov r8, 3
+		mov [deltaY], r8
+		mov r8, '-'
+		mov [dir_mov_X], r8
+		jmp _loopdejuego
+		
+	_segundointento:
 	
-	leer_texto teclado,1	
-	mov r15, [teclado]
+		mov r8, 1
+		mov [deltaX], r8
+		mov r8, 1
+		mov [deltaY], r8
+		mov r8, '+'
+		mov [dir_mov_X], r8
+		jmp _loopdejuego
+		
 	
-	cmp r15, 'q'
-	je _final_ejecucion
+	;Etiqueta para encerrar los ciclos en donde el juego se desarrollara hasta que la pelota llege
+	; a tocar el suelo o se hayan eliminado todos los bloques
+	_loopdejuego:	
 	
-	cmp r15, 'z'
-	je _mov_izquierda	
-	
-	cmp r15, 'c'
-	je _mov_derecha
-	
-	call borra_tabla_pelota
-	jmp _siguiente
-	
-	_mov_izquierda:
-	call borra_tabla_pelota
-	call tabla_izquierda	
-	jmp _siguiente	
-	
-	_mov_derecha:
-	call borra_tabla_pelota
-	call tabla_derecha	
-	jmp _siguiente
-	
-	_siguiente:
-	
-	call modificar_posicion
-	
-	mov r8, posX_bloque
-	cmp r8, 0
-	je _loopdeprueba
-	
-	call borra_bloque
-	cmp r8, 0
-	mov [posX_bloque], r8 
-	mov [posY_bloque], r8 
-	mov [teclado], r8 
-	jmp _loopdeprueba
-	
+		;Se reinicia el valor de la variable teclado
+		mov r15, 0
+		mov [teclado], r15
+
+		;Se llama a imprimir la tabla y la pelota
+		call imprime_tabla_pelota	
+		
+		;Se recibe la tecla presionada desde el teclado, y se mueve a la variable temporal teclado
+		leer_texto teclado,1	
+		mov r15, [teclado]
+		
+		;Se compara lo obtenido del teclado para saber que accion corresponde
+		cmp r15, 'q'			;la tecla q fue seleccionada para que finalice el juego abruptamente
+		je _final_ejecucion
+		
+		cmp r15, 'z'			;la tecla z fue seleccionada para mover la tabla a la izquierda
+		je _mov_izquierda	
+		
+		cmp r15, 'c'			;la tecla c fue seleccionada para mover la tabla a la derecha
+		je _mov_derecha
+		
+		call borra_tabla_pelota	;si ninguna tecla fue seleccionada, entonces se procede a borrar la tabla y la pelota y a pasar a la siguiente fase
+		jmp _siguiente
+		
+		_mov_izquierda:		;acciones si fue presionada la tecla z
+		call borra_tabla_pelota	;borrar la tabla y la pelota
+		call tabla_izquierda		;llamar a la funcion que agrega una posicion a la izquierda
+		jmp _siguiente			;saltar al siguiente paso
+		
+		_mov_derecha:			;acciones si fue presionada la tecla c
+		call borra_tabla_pelota	;borrar la tabla y la pelota
+		call tabla_derecha		;llamar a la funcion que agrega una posicion a la izquierda
+		jmp _siguiente			;saltar al siguiente paso
+		
+		
+		;Etiqueta de la segunda parte del proceso del ciclo de juego
+		_siguiente:
+		
+		call modificar_posicion	;Se llama a la funcion mas importante, que es la que modifica la posicion y admite cambios de direccion segun las condiciones
+		
+		mov r8, [posX_bloque]	;Se revisa si hay alguna posicion de bloque cargada en memoria luego de ejecutar la funcion modificar_posicion
+		cmp r8, 0
+			je _loopdejuego		;Si no la hay, entonces se lanza a otro ciclo de juego
+			
+			call borra_bloque		;Si la hay, entonces se llama a borrar el bloque cargado en memoria, y luego se inicializan las variables de bloque
+			mov r8, 0
+			mov [posX_bloque], r8 
+			mov [posY_bloque], r8 
+			jmp _loopdejuego
+			
+			
+		
 	
 	_final_ejecucion:
 	limpiar_pantalla clean,clean_tam
@@ -1102,34 +1142,59 @@ modificar_posicion:
 				
 				
 			_intersecciontabla:
-				;mov r14, [posX_tabla]
-				;cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota
-				;	
-				;	jae _anchotabla
-				;	
-				;	jmp _movimientos_generales
-				;	
-				;	_anchotabla:
-				;		add r14, 7
-				;		cmp r14, r10 ;Comparacion de las posiciones en X del final de la tabla vs la pelota
-				;		
-				;		jbe _final_intersecciontabla
-				;	
-				;		jmp _movimientos_generales
-				;		
-				;		_final_intersecciontabla:
+				mov r14, [posX_tabla]
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota
 				
-							;??????????????????
-							cmp r9, '+'	
-							jne _nomal
-							jmp _movimientos_generales
-							
-							_nomal:
-							;???????????????????
-							mov  [posX_bola], r10	
-							mov [posY_bola], r11 	
-							call modificar_direccion
-							jmp _fin_modificar_posicion
+				je _final_intersecciontabla
+				
+				inc r14	;se le suma 1 unidad
+			
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota			
+				je _final_intersecciontabla
+				
+				inc r14	;se le suma 2 unidades
+				
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota			
+				je _final_intersecciontabla
+				
+				inc r14	;se le suma 3 unidades
+				
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota			
+				je _final_intersecciontabla
+				
+				inc r14	;se le suma 4 unidades
+				
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota			
+				je _final_intersecciontabla
+				
+				inc r14	;se le suma 5 unidades
+				
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota			
+				je _final_intersecciontabla
+				
+				inc r14	;se le suma 6 unidades
+				
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota			
+				je _final_intersecciontabla
+				
+				inc r14	;se le suma 7 unidades
+				
+				cmp r14, r10 ;Comparacion de las posiciones en X del inicio de la tabla vs la pelota			
+				je _final_intersecciontabla
+				
+					jmp _movimientos_generales ;Si ninguna coincide, entonces se sigue con la trayectoria normal
+				
+										
+				_final_intersecciontabla:
+					cmp r9, '+'	
+					jne _nomal
+					jmp _movimientos_generales
+					
+					_nomal:
+					mov  [posX_bola], r10	
+					mov [posY_bola], r11 	
+					call modificar_direccion
+					jmp _fin_modificar_posicion
 						
 				
 						
