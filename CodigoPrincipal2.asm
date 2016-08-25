@@ -76,8 +76,9 @@ section .data
 	
 	;Mensajes especiales para el area de juego
 	msj_press_x:			db '|          > Presione X para continuar <          |', 0xa
+	msj_press_enter:			db '|        > Presione enter para continuar<         |', 0xa
 	msj_vida_menos:		db '|              > Ha perdido una vida <            |', 0xa
-	msj_game_over:		db '|               > Fin del juego... <              |', 0xa	
+	msj_game_over:		db '|> Fin del juego...  Mejor suerte para la proxima<|', 0xa	
 	
 	;Lineas anteriores son del mismo tamano, entonces se maneja como una constante
 	tamano_linea: 		equ 52
@@ -232,6 +233,10 @@ _start:
 	call canonical_off 
 	call echo_off
 
+
+	;Etiqueta de reinicio
+	_loopdeproceso:
+	
 	;Limpiar la pantalla
 	limpiar_pantalla clean,clean_tam
 	
@@ -253,8 +258,7 @@ _start:
 	call cursor_inicial		
 	
 	;Se reinician los valores de posicion 
-	call reestablecer_valores
-	
+	call reestablecer_valores	
 	
 	
 	;Se cargan los movimientos de pelota y la direccion horizontal, segun el numero de intento
@@ -305,6 +309,24 @@ _start:
 
 		;Se llama a imprimir la tabla y la pelota
 		call imprime_tabla_pelota	
+		
+		;Se compara si la pelota ha caido al suelo
+		mov r15, [posY_bola]
+		cmp r15, 1
+			jne _nohacaido		
+			
+			mov r15, [intentos]
+			dec	r15
+			mov [intentos], r15
+			call imprimir_pierdevida
+			
+			_microloop1:
+			leer_texto teclado,1	
+			mov r15, [teclado]
+			cmp r15, 0xa			;la tecla q fue seleccionada para que finalice el juego abruptamente
+			je _loopdeproceso
+		
+		;Se compara si la cantidad de intentos es igual a cero
 		
 		;Se recibe la tecla presionada desde el teclado, y se mueve a la variable temporal teclado
 		leer_texto teclado,1	
